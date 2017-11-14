@@ -283,4 +283,101 @@ func aesCBCDecrypt(key, src []byte) ([]byte, error) {
 }
 //代码在bccsp/sw/aes.go
 ```
-
+pkcs7Padding和aesCBCEncrypt整合后代码如下：
+```go
+//AES加密
+func AESCBCPKCS7Encrypt(key, src []byte) ([]byte, error) {
+	tmp := pkcs7Padding(src)
+	return aesCBCEncrypt(key, tmp)
+}
+//AES解密
+func AESCBCPKCS7Decrypt(key, src []byte) ([]byte, error) {
+	pt, err := aesCBCDecrypt(key, src)
+	return pkcs7UnPadding(pt)
+}
+//代码在bccsp/sw/aes.go
+```
+### 4.5、RSA算法相关代码实现
+签名相关代码如下：
+```go
+type rsaSigner struct{}
+func (s *rsaSigner) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
+	//...
+	return k.(*rsaPrivateKey).privKey.Sign(rand.Reader, digest, opts) //签名
+}
+//代码在bccsp/sw/rsa.go
+```
+校验签名相关代码如下：
+```go
+type rsaPrivateKeyVerifier struct{}
+func (v *rsaPrivateKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
+	/...
+	rsa.VerifyPSS(&(k.(*rsaPrivateKey).privKey.PublicKey), (opts.(*rsa.PSSOptions)).Hash, digest, signature, opts.(*rsa.PSSOptions)) //验签
+	/...	
+}
+```
+```go
+type rsaPublicKeyKeyVerifier struct{}
+func (v *rsaPublicKeyKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
+	/...
+	err := rsa.VerifyPSS(k.(*rsaPublicKey).pubKey, (opts.(*rsa.PSSOptions)).Hash, digest, signature, opts.(*rsa.PSSOptions)) //验签
+	/...
+}
+//代码在bccsp/sw/rsa.go
+```
+另附"crypto/rsa"包中rsaPrivateKey和rsaPublicKey定义如下：
+```go
+type rsaPrivateKey struct {
+	privKey *rsa.PrivateKey
+}
+type rsaPublicKey struct {
+	pubKey *rsa.PublicKey
+}
+```
+### 4.6、椭圆曲线算法相关代码实现
+代码在bccsp/sw/ecdsa.go
+椭圆曲线算法，相关内容参考：[Fabric1.0源码之旅附录(1)-椭圆曲线算法](../EllipticCurveAlgorithm/EllipticCurveAlgorithm.md)
+### 4.7、文件类型KeyStore接口实现
+虚拟类型KeyStore接口实现dummyKeyStore，无任何实际操作，忽略。
+文件类型KeyStore接口实现fileBasedKeyStore，数据结构定义如下：
+```go
+type fileBasedKeyStore struct {
+	path string //路径
+	readOnly bool //是否只读
+	isOpen   bool //是否打开
+	pwd []byte //密码
+	m sync.Mutex //锁
+}
+```
+涉及方法如下：
+```go
+func NewFileBasedKeyStore(pwd []byte, path string, readOnly bool) (bccsp.KeyStore, error)
+func (ks *fileBasedKeyStore) Init(pwd []byte, path string, readOnly bool) error
+func (ks *fileBasedKeyStore) ReadOnly() bool
+func (ks *fileBasedKeyStore) GetKey(ski []byte) (k bccsp.Key, err error)
+func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error)
+func (ks *fileBasedKeyStore) searchKeystoreForSKI(ski []byte) (k bccsp.Key, err error)
+func (ks *fileBasedKeyStore) getSuffix(alias string) string
+func (ks *fileBasedKeyStore) storePrivateKey(alias string, privateKey interface{}) error
+func (ks *fileBasedKeyStore) storePublicKey(alias string, publicKey interface{}) error
+func (ks *fileBasedKeyStore) storeKey(alias string, key []byte) error
+func (ks *fileBasedKeyStore) loadPrivateKey(alias string) (interface{}, error)
+func (ks *fileBasedKeyStore) loadPublicKey(alias string) (interface{}, error)
+func (ks *fileBasedKeyStore) loadKey(alias string) ([]byte, error)
+func (ks *fileBasedKeyStore) createKeyStoreIfNotExists() error
+func (ks *fileBasedKeyStore) createKeyStore() error
+func (ks *fileBasedKeyStore) openKeyStore() error
+func (ks *fileBasedKeyStore) getPathForAlias(alias, suffix string) string
+```
+## 20、本文使用到如下网络内容
+* [fabric源码解析13——peer的BCCSP服务](http://blog.csdn.net/idsuf698987/article/details/77200287)
+* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （三）BCCSP包之工厂包](http://blog.csdn.net/lsttoy/article/details/73278445)
+* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （四）BSSCP包之pkcs11加密包](http://blog.csdn.net/lsttoy/article/details/73292182)
+* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （五）BSSCP包之SW加密包](http://blog.csdn.net/lsttoy/article/details/73322148)
+* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （六）BSSCP包之UTILS工具包](http://blog.csdn.net/lsttoy/article/details/73459950)
+* [Hyperledger Fabric密码模块系列之BCCSP（一）](http://www.cnblogs.com/informatics/p/7522445.html)
+* [Hyperledger Fabric密码模块系列之BCCSP（二）](http://www.cnblogs.com/informatics/p/7572969.html)
+* [Hyperledger Fabric密码模块系列之BCCSP（三）(http://www.cnblogs.com/informatics/p/7604461.html)
+* [Hyperledger Fabric密码模块系列之BCCSP（四）(http://www.cnblogs.com/informatics/p/7604470.html)
+* [Hyperledger Fabric密码模块系列之BCCSP（五） - 国密算法实现(http://www.cnblogs.com/informatics/p/7648039.html)
+* [【翻译】BCCSP密码算法套件解析](http://www.blockchainbrother.com/article/31)
