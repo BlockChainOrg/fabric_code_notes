@@ -80,3 +80,207 @@ type KeyImportOpts interface {
 }
 //代码在bccsp/bccsp.go
 ```
+HashOpts接口（哈希选项）定义如下：
+```go
+//Hash(msg []byte, opts HashOpts) (hash []byte, err error)
+type HashOpts interface {
+	Algorithm() string //获取哈希算法标识符
+}
+//代码在bccsp/bccsp.go
+```
+SignerOpts接口（签名选项）定义如下：
+```go
+//Sign(k Key, digest []byte, opts SignerOpts) (signature []byte, err error)
+//即go标准库crypto.SignerOpts接口
+type SignerOpts interface {
+	crypto.SignerOpts
+}
+//代码在bccsp/bccsp.go
+```
+另外EncrypterOpts接口（加密选项）和DecrypterOpts接口（解密选项）均为空接口。
+```go
+type EncrypterOpts interface{}
+type DecrypterOpts interface{}
+//代码在bccsp/bccsp.go
+```
+## 4、SW实现方式
+### 4.1、sw目录结构
+SW实现方式是默认实现方式，代码在bccsp/sw。主要目录结构如下：
+
+* impl.go，bccsp的SW实现。
+* internals.go，签名者、校验者、加密者、解密者等接口定义，包括：KeyGenerator、KeyDeriver、KeyImporter、Hasher、Signer、Verifier、Encryptor和Decryptor。
+* conf.go，bccsp的sw实现的配置定义。
+------
+* aes.go，AES类型的加密者（aescbcpkcs7Encryptor）和解密者（aescbcpkcs7Decryptor）接口实现。AES为一种对称加密算法。
+* ecdsa.go，ECDSA类型的签名者（ecdsaSigner）和校验者（ecdsaPrivateKeyVerifier和ecdsaPublicKeyKeyVerifier）接口实现。ECDSA即椭圆曲线算法。
+* rsa.go，RSA类型的签名者（rsaSigner）和校验者（rsaPrivateKeyVerifier和rsaPublicKeyKeyVerifier）接口实现。RSA为另一种非对称加密算法。
+------
+* aeskey.go，AES类型的Key接口实现。
+* ecdsakey.go，ECDSA类型的Key接口实现，包括ecdsaPrivateKey和ecdsaPublicKey。
+* rsakey.go，RSA类型的Key接口实现，包括rsaPrivateKey和rsaPublicKey。
+------
+* dummyks.go，dummy类型的KeyStore接口实现，即dummyKeyStore，用于暂时性的Key，保存在内存中，系统关闭即消失。
+* fileks.go，file类型的KeyStore接口实现，即fileBasedKeyStore，用于长期的Key，保存在文件中。
+------
+* keygen.go，KeyGenerator接口实现，包括aesKeyGenerator、ecdsaKeyGenerator和rsaKeyGenerator。
+* keyderiv.go，KeyDeriver接口实现，包括aesPrivateKeyKeyDeriver、ecdsaPrivateKeyKeyDeriver和ecdsaPublicKeyKeyDeriver。
+* keyimport.go，KeyImporter接口实现，包括aes256ImportKeyOptsKeyImporter、ecdsaPKIXPublicKeyImportOptsKeyImporter、ecdsaPrivateKeyImportOptsKeyImporter、
+　　ecdsaGoPublicKeyImportOptsKeyImporter、rsaGoPublicKeyImportOptsKeyImporter、hmacImportKeyOptsKeyImporter和x509PublicKeyImportOptsKeyImporter。
+* hash.go，Hasher接口实现，即hasher。
+### 4.2、SW bccsp配置
+即代码bccsp/sw/conf.go，config数据结构定义：
+elliptic.Curve为椭圆曲线接口，使用了crypto/elliptic包。有关椭圆曲线，参考http://8btc.com/thread-1240-1-1.html。
+SHA，全称Secure Hash Algorithm，即安全哈希算法，参考https://www.cnblogs.com/kabi/p/5871421.html。
+
+```go
+type config struct {
+	ellipticCurve elliptic.Curve //指定椭圆曲线，elliptic.P256()和elliptic.P384()分别为P-256曲线和P-384曲线
+	hashFunction  func() hash.Hash //指定哈希函数，如SHA-2（SHA-256、SHA-384、SHA-512等）和SHA-3
+	aesBitLength  int //指定AES密钥长度
+	rsaBitLength  int //指定RSA密钥长度
+}
+//代码在bccsp/sw/conf.go
+```
+func (conf *config) setSecurityLevel(securityLevel int, hashFamily string) (err error)为设置安全级别和哈希系列（包括SHA2和SHA3）。
+如果hashFamily为"SHA2"或"SHA3"，将分别调取conf.setSecurityLevelSHA2(securityLevel)或conf.setSecurityLevelSHA3(securityLevel)。
+
+func (conf *config) setSecurityLevelSHA2(level int) (err error)代码如下：
+```go
+switch level {
+case 256:
+	conf.ellipticCurve = elliptic.P256() //P-256曲线
+	conf.hashFunction = sha256.New //SHA-256
+	conf.rsaBitLength = 2048 //指定AES密钥长度2048
+	conf.aesBitLength = 32 //指定RSA密钥长度32
+case 384:
+	conf.ellipticCurve = elliptic.P384() //P-384曲线
+	conf.hashFunction = sha512.New384 //SHA-384
+	conf.rsaBitLength = 3072 //指定AES密钥长度3072
+	conf.aesBitLength = 32 //指定RSA密钥长度32
+//...
+}
+//代码在bccsp/sw/conf.go
+```
+func (conf *config) setSecurityLevelSHA3(level int) (err error)代码如下：
+```go
+switch level {
+case 256:
+	conf.ellipticCurve = elliptic.P256() //P-256曲线
+	conf.hashFunction = sha3.New256 //SHA3-256
+	conf.rsaBitLength = 2048 //指定AES密钥长度2048
+	conf.aesBitLength = 32 //指定RSA密钥长度32
+case 384:
+	conf.ellipticCurve = elliptic.P384() //P-384曲线
+	conf.hashFunction = sha3.New384 //SHA3-384
+	conf.rsaBitLength = 3072 //指定AES密钥长度3072
+	conf.aesBitLength = 32 //指定RSA密钥长度32
+//...
+}
+//代码在bccsp/sw/conf.go
+```
+### 4.3、SW bccsp实例结构体定义
+```go
+type impl struct {
+	conf *config //bccsp实例的配置
+	ks   bccsp.KeyStore //KeyStore对象，用于存储和获取Key
+
+	keyGenerators map[reflect.Type]KeyGenerator //KeyGenerator映射
+	keyDerivers   map[reflect.Type]KeyDeriver //KeyDeriver映射
+	keyImporters  map[reflect.Type]KeyImporter //KeyImporter映射
+	encryptors    map[reflect.Type]Encryptor //加密者映射
+	decryptors    map[reflect.Type]Decryptor //解密者映射
+	signers       map[reflect.Type]Signer //签名者映射
+	verifiers     map[reflect.Type]Verifier //校验者映射
+	hashers       map[reflect.Type]Hasher //Hasher映射
+}
+//代码在bccsp/sw/impl.go
+```
+涉及如下方法： 
+```go
+func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) //生成sw实例
+func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) //生成Key
+func (csp *impl) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, err error) //派生Key
+func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) //导入Key
+func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error) //获取Key
+func (csp *impl) Hash(msg []byte, opts bccsp.HashOpts) (digest []byte, err error) //哈希msg
+func (csp *impl) GetHash(opts bccsp.HashOpts) (h hash.Hash, err error) //获取哈希实例
+func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) //签名
+func (csp *impl) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) //校验签名
+func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts) (ciphertext []byte, err error) //加密
+func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error) //解密
+//代码在bccsp/sw/impl.go
+```
+func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.BCCSP, error)作用为：
+设置securityLevel和hashFamily，设置keyStore、encryptors、decryptors、signers、verifiers和hashers，之后设置keyGenerators、keyDerivers和keyImporters。
+
+func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error)作用为：
+按opts查找keyGenerator是否在csp.keyGenerators[]中，如果在则调取keyGenerator.KeyGen(opts)生成Key。如果opts.Ephemeral()不是暂时的，调取csp.ks.StoreKey存储Key。
+
+func (csp *impl) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, err error)作用为：
+按k的类型查找keyDeriver是否在csp.keyDerivers[]中，如果在则调取keyDeriver.KeyDeriv(k, opts)派生Key。如果opts.Ephemeral()不是暂时的，调取csp.ks.StoreKey存储Key。
+```go
+func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error)
+func (csp *impl) Hash(msg []byte, opts bccsp.HashOpts) (digest []byte, err error)
+func (csp *impl) GetHash(opts bccsp.HashOpts) (h hash.Hash, err error)
+func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error)
+func (csp *impl) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error)
+func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts) (ciphertext []byte, err error)
+func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error)
+//与上述方法实现方式相似。
+```
+func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error)作用为：按ski调取csp.ks.GetKey(ski)获取Key。
+### 4.4、AES算法相关代码实现
+参考：https://studygolang.com/articles/7302。
+AES，Advanced Encryption Standard，即高级加密标准，是一种对称加密算法。
+AES属于块密码工作模式。块密码工作模式，允许使用同一个密码块对于多于一块的数据进行加密。
+块密码只能加密长度等于密码块长度的单块数据，若要加密变长数据，则数据必须先划分为一些单独的数据块。
+通常而言最后一块数据，也需要使用合适的填充方式将数据扩展到符合密码块大小的长度。
+
+Fabric中使用的填充方式为：pkcs7Padding，即填充字符串由一个字节序列组成，每个字节填充该字节序列的长度。 代码如下：
+另外pkcs7UnPadding为其反操作。
+```go
+func pkcs7Padding(src []byte) []byte {
+	padding := aes.BlockSize - len(src)%aes.BlockSize //计算填充长度
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding) //bytes.Repeat构建长度为padding的字节序列，内容为padding
+	return append(src, padtext...)
+}
+//代码在bccsp/sw/aes.go
+```
+AES常见模式有ECB、CBC等。其中ECB，对于相同的数据块都会加密为相同的密文块，这种模式不能提供严格的数据保密性。
+而CBC模式，每个数据块都会和前一个密文块异或后再加密，这种模式中每个密文块都会依赖前一个数据块。同时为了保证每条消息的唯一性，在第一块中需要使用初始化向量。
+Fabric使用了CBC模式，代码如下：
+```go
+//AES加密
+func aesCBCEncrypt(key, s []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key) //生成加密块
+
+	//随机一个块大小作为初始化向量
+	ciphertext := make([]byte, aes.BlockSize+len(s))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, err
+	}
+
+	mode := cipher.NewCBCEncrypter(block, iv) //创建CBC模式加密器
+	mode.CryptBlocks(ciphertext[aes.BlockSize:], s) //执行加密操作
+
+	return ciphertext, nil
+}
+//代码在bccsp/sw/aes.go
+```
+```go
+//AES解密
+func aesCBCDecrypt(key, src []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key) //生成加密块
+
+	iv := src[:aes.BlockSize] //初始化向量
+	src = src[aes.BlockSize:] //实际数据
+
+	mode := cipher.NewCBCDecrypter(block, iv) //创建CBC模式解密器
+	mode.CryptBlocks(src, src) //执行解密操作
+
+	return src, nil
+}
+//代码在bccsp/sw/aes.go
+```
+
