@@ -185,3 +185,96 @@ type FactoryOpts struct {
 }
 //FactoryOpts代码在bccsp/factory/nopkcs11.go，本目录下另有代码文件pkcs11.go，在-tags "nopkcs11"条件下二选一编译。
 ```
+```go
+type SwOpts struct {
+	// Default algorithms when not specified (Deprecated?)
+	SecLevel   int    `mapstructure:"security" json:"security" yaml:"Security"`
+	HashFamily string `mapstructure:"hash" json:"hash" yaml:"Hash"`
+
+	// Keystore Options
+	Ephemeral     bool               `mapstructure:"tempkeys,omitempty" json:"tempkeys,omitempty"`
+	FileKeystore  *FileKeystoreOpts  `mapstructure:"filekeystore,omitempty" json:"filekeystore,omitempty" yaml:"FileKeyStore"`
+	DummyKeystore *DummyKeystoreOpts `mapstructure:"dummykeystore,omitempty" json:"dummykeystore,omitempty"`
+}
+type FileKeystoreOpts struct {
+	KeyStorePath string `mapstructure:"keystore" yaml:"KeyStore"`
+}
+//SwOpts和FileKeystoreOpts代码均在bccsp/factory/swfactory.go
+```
+如下代码为viperutil.EnhancedExactUnmarshalKey("peer.BCCSP", &bccspConfig)的具体实现，getKeysRecursively为递归读取peer.BCCSP配置信息。
+mapstructure为第三方包：github.com/mitchellh/mapstructure，用于将map[string]interface{}转换为struct。
+示例代码：https://godoc.org/github.com/mitchellh/mapstructure#example-Decode--WeaklyTypedInput
+```go
+func EnhancedExactUnmarshalKey(baseKey string, output interface{}) error {
+	m := make(map[string]interface{})
+	m[baseKey] = nil
+	leafKeys := getKeysRecursively("", viper.Get, m)
+
+	config := &mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           output,
+		WeaklyTypedInput: true,
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	return decoder.Decode(leafKeys[baseKey])
+}
+//代码在common/viperutil/config_util.go
+```
+如下代码为mspmgmt.LoadLocalMsp(mspMgrConfigDir, bccspConfig, localMSPID)的具体实现，从指定目录中加载本地MSP。
+```go
+conf, err := msp.GetLocalMspConfig(dir, bccspConfig, mspID)
+return GetLocalMSP().Setup(conf)
+//代码在msp/mgmt/mgmt.go
+```
+如下代码为msp.GetLocalMspConfig(dir, bccspConfig, mspID)的具体实现。
+SetupBCCSPKeystoreConfigSetupBCCSPKeystoreConfig()核心代码为bccspConfig.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: keystoreDir}，
+目的是在FileKeystore或KeyStorePath为空时设置默认值。
+```go
+signcertDir := filepath.Join(dir, signcerts) //signcerts为"signcerts"，signcertDir即/etc/hyperledger/fabric/msp/signcerts/
+keystoreDir := filepath.Join(dir, keystore) //keystore为"keystore"，keystoreDir即/etc/hyperledger/fabric/msp/keystore/
+bccspConfig = SetupBCCSPKeystoreConfig(bccspConfig, keystoreDir) //设置bccspConfig.SwOpts.Ephemeral = false和bccspConfig.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: keystoreDir}
+//bccspConfig.SwOpts.Ephemeral是否短暂的
+err := factory.InitFactories(bccspConfig) //
+signcert, err := getPemMaterialFromDir(signcertDir)
+sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
+return getMspConfig(dir, ID, sigid)
+//代码在msp/configbuilder.go
+```
+如下代码为factory.InitFactories(bccspConfig)的具体实现。
+```go
+bccspMap = make(map[string]bccsp.BCCSP)
+f := &SWFactory{}
+err := initBCCSP(f, config)
+defaultBCCSP, ok = bccspMap[config.ProviderName]
+//代码在bccsp/factory/nopkcs11.go
+```
+如下代码为initBCCSP(f, config)的具体实现。
+```go
+csp, err := f.Get(config)
+bccspMap[f.Name()] = csp
+//代码在bccsp/factory/factory.go
+```
+如下代码为f.Get(config)的具体实现。其中sw.NewFileBasedKeyStore(nil, swOpts.FileKeystore.KeyStorePath, false) 为创建并打开一个fileBasedKeyStore，
+该对象实现了bccsp.KeyStore接口，支持key文件的读取和存储。
+f.Get(config)返回值为bccsp.BCCSP接口类型，bccsp.sw.impl为其实现，对象由sw.New(swOpts.SecLevel, swOpts.HashFamily, ks)创建。
+```go
+swOpts := config.SwOpts
+var ks bccsp.KeyStore
+fks, err := sw.NewFileBasedKeyStore(nil, swOpts.FileKeystore.KeyStorePath, false) //创建并打开一个fileBasedKeyStore，该对象实现了bccsp.KeyStore接口
+ks = fks
+return sw.New(swOpts.SecLevel, swOpts.HashFamily, ks)
+//代码在bccsp/factory/swfactory.go
+```
+bccsp.KeyStore接口定义如下：
+```go
+type KeyStore interface {
+	ReadOnly() bool
+	GetKey(ski []byte) (k Key, err error)
+	StoreKey(k Key) (err error)
+}
+```
+如下代码为为sw.New(swOpts.SecLevel, swOpts.HashFamily, ks)的具体实现。
+```go
+//代码在bccsp/sw/impl.go
+```
+## 未完待续。。。
