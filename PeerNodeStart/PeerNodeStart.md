@@ -1,4 +1,4 @@
-# Fabric源码之旅(1)-Peer节点启动流程
+# Fabric 1.0源码之旅(1)-Peer节点启动流程
 如下内容从peer/main.go开始。
 ## 1、加载环境变量配置和配置文件
 Fabric支持通过环境变量对部分配置进行更新，如：CORE_LOGGING_LEVEL为输出的日志级别、CORE_PEER_ID为Peer的ID等。
