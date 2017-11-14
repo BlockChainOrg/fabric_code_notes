@@ -6,14 +6,14 @@ BCCSP通过MSP（即Membership Service Provider成员关系服务提供者）给
 另外BCCSP支持可插拔，提供多种CSP，支持自定义CSP。目前支持sw和pkcs11两种实现。
 
 代码在bccsp目录，bccsp主要目录结构如下：
-bccsp.go，主要是接口声明，定义了BCCSP和Key接口，以及众多Opts接口，如KeyGenOpts、KeyDerivOpts、KeyImportOpts、HashOpts、SignerOpts、EncrypterOpts和DecrypterOpts。
-keystore.go，定义了KeyStore接口，即Key的管理和存储接口。如果Key不是暂时的，则存储在实现了该接口的对象中，否则不存储。
-xxxopts.go，bccsp所使用到的各种技术选项的实现。
-factory目录，即bccsp工厂包，通过bccsp工厂返回bccsp实例，比如sw或pkcs11，如果自定义bccsp实现，也需加添加到factory中。
-sw目录，为the software-based implementation of the BCCSP，即基于软件的BCCSP实现，通过调用go原生支持的密码算法实现，并提供keystore来保存密钥。
-pkcs11目录，为bccsp的pkcs11实现，通过调用pkcs11接口实现相关加密操作，仅支持ecdsa、rsa以及aes算法，密码保存在pkcs11通过pin口令保护的数据库或者硬件设备中。
-utils目录，为工具函数包。
-signer目录，实现go crypto标准库的Signer接口。
+* bccsp.go，主要是接口声明，定义了BCCSP和Key接口，以及众多Opts接口，如KeyGenOpts、KeyDerivOpts、KeyImportOpts、HashOpts、SignerOpts、EncrypterOpts和DecrypterOpts。
+* keystore.go，定义了KeyStore接口，即Key的管理和存储接口。如果Key不是暂时的，则存储在实现了该接口的对象中，否则不存储。
+* *opts.go，bccsp所使用到的各种技术选项的实现。
+* [factory]目录，即bccsp工厂包，通过bccsp工厂返回bccsp实例，比如sw或pkcs11，如果自定义bccsp实现，也需加添加到factory中。
+* [sw]目录，为the software-based implementation of the BCCSP，即基于软件的BCCSP实现，通过调用go原生支持的密码算法实现，并提供keystore来保存密钥。
+* [pkcs11]目录，为bccsp的pkcs11实现，通过调用pkcs11接口实现相关加密操作，仅支持ecdsa、rsa以及aes算法，密码保存在pkcs11通过pin口令保护的数据库或者硬件设备中。
+* [utils]目录，为工具函数包。
+* [signer]目录，实现go crypto标准库的Signer接口。
 补充：bccsp_test.go和mocks目录，可忽略。
 ## 2、BCCSP接口定义
 BCCSP接口（区块链加密服务提供者）定义如下：
