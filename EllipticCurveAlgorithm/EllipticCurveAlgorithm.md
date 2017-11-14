@@ -68,3 +68,93 @@ P(x1,y1),Q(x2,y2)的和R(x3,y3) 有如下关系：
 	y=6(3-7)-10=-34≡12 (mod 23) 
 	故2P的坐标为(7,12) 
 ```
+如果椭圆曲线上一点P，存在最小的正整数n，使得数乘nP=O∞，则将n称为P的阶，若n不存在，我们说P是无限阶的。 
+事实上，在有限域上定义的椭圆曲线上所有的点的阶n都是存在的。
+### 1.6、椭圆曲线上简单的加密/解密
+考虑如下等式：
+K=kG  [其中 K,G为Ep(a,b)上的点，k为小于n（n是点G的阶）的整数]。
+不难发现，给定k和G，根据加法法则，计算K很容易；但给定K和G，求k就相对困难了。
+这就是椭圆曲线加密算法采用的难题。
+我们把点G称为基点（base point），k（k<n，n为基点G的阶）称为私有密钥（privte key），K称为公开密钥（public key)。
+
+补充：如上内容参考自
+* [【信息安全】ECC加密算法入门介绍](https://yq.aliyun.com/articles/23897)
+* [ECC椭圆曲线详解(有具体实例)](https://yq.aliyun.com/articles/23897)
+
+## 2、椭圆曲线接口及实现
+### 2.1、椭圆曲线接口定义
+```go
+type Curve interface {
+	Params() *CurveParams //返回曲线参数
+	IsOnCurve(x, y *big.Int) bool //(x,y)是否在曲线上
+	Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) //(x1,y1)和(x2,y2)求和
+	Double(x1, y1 *big.Int) (x, y *big.Int) //2*(x,y)
+	ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) //返回k*(Bx,By)
+	ScalarBaseMult(k []byte) (x, y *big.Int) //返回k*G，其中G为基点
+}
+//代码在crypto/elliptic/elliptic.go
+```
+### 2.2、CurveParams结构体定义及通用实现
+CurveParams包括椭圆曲线的参数，并提供了一个通用椭圆曲线实现。代码如下：
+```go
+type CurveParams struct {
+	P       *big.Int //% p中的p
+	N       *big.Int //基点的阶，如果椭圆曲线上一点P，存在最小的正整数n，使得数乘nP=O∞，则将n称为P的阶
+	B       *big.Int //曲线方程中常数b，如y² = x³ - 3x + b
+	Gx, Gy  *big.Int //基点G(x,y)
+	BitSize int      //基础字段的大小
+	Name    string   //椭圆曲线的名称
+}
+//代码在crypto/elliptic/elliptic.go
+```
+CurveParams涉及如下方法：
+```go
+func (curve *CurveParams) Params() *CurveParams //返回曲线参数，即curve
+func (curve *CurveParams) IsOnCurve(x, y *big.Int) bool //(x,y)是否在曲线上
+func (curve *CurveParams) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) //(x1,y1)和(x2,y2)求和
+func (curve *CurveParams) Double(x1, y1 *big.Int) (*big.Int, *big.Int) //2*(x,y)
+func (curve *CurveParams) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) //返回k*(Bx,By)
+func (curve *CurveParams) ScalarBaseMult(k []byte) (*big.Int, *big.Int) //返回k*G，其中G为基点
+//代码在crypto/elliptic/elliptic.go
+```
+### 2.3、几种曲线
+```go
+func P224() Curve //实现了P-224的曲线
+func P256() Curve //实现了P-256的曲线
+func P384() Curve //实现了P-384的曲线
+func P521() Curve //实现了P-512的曲线
+//代码在crypto/elliptic/elliptic.go
+```
+## 3、椭圆曲线数字签名算法
+结构体定义：
+```go
+type PublicKey struct { //公钥
+	elliptic.Curve
+	X, Y *big.Int
+}
+type PrivateKey struct { //私钥
+	PublicKey
+	D *big.Int
+}
+type ecdsaSignature struct { //椭圆曲线签名
+	R, S *big.Int
+}
+//代码在crypto/ecdsa/ecdsa.go
+```
+涉及如下方法：
+```go
+func (priv *PrivateKey) Public() crypto.PublicKey //获取公钥
+func (priv *PrivateKey) Sign(rand io.Reader, msg []byte, opts crypto.SignerOpts) ([]byte, error) //使用私钥对任意长度的hash值进行签名
+func GenerateKey(c elliptic.Curve, rand io.Reader) (*PrivateKey, error) //生成一对公钥/私钥
+func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err error) //使用私钥对任意长度的hash值进行签名
+func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool //使用公钥验证hash值和两个大整数r、s构成的签名
+//代码在crypto/ecdsa/ecdsa.go
+```
+## 4、参考文档
+* [初学者如何理解射影平面](https://wenku.baidu.com/view/3d245b608e9951e79b892768.html)
+* [ECC椭圆曲线详解(有具体实例)](http://www.cnblogs.com/Kalafinaian/p/7392505.html)
+* [说说椭圆曲线](http://blog.sina.com.cn/s/blog_564e1db00102vq25.html)
+* [椭圆曲线密码学简介](http://www.8btc.com/introduction)
+* [【信息安全】ECC加密算法入门介绍](https://yq.aliyun.com/articles/23897)
+* [椭圆曲线算法：入门（1）](http://www.jianshu.com/p/2e6031ac3d50)
+
