@@ -1,11 +1,15 @@
 # Fabric 1.0源码之旅(2)-BCCSP
+
 Peer节点启动流程，涉及BCCSP，本文专门详解BCCSP。
+
 ## 1、BCCSP概要
+
 BCCSP，全称Blockchain Cryptographic Service Provider，即区块链加密服务提供者，为Fabric提供加密标准和算法的实现，包括哈希、签名、校验、加解密等。
 BCCSP通过MSP（即Membership Service Provider成员关系服务提供者）给核心功能和客户端SDK提供加密算法相关服务。
 另外BCCSP支持可插拔，提供多种CSP，支持自定义CSP。目前支持sw和pkcs11两种实现。
 
 代码在bccsp目录，bccsp主要目录结构如下：
+
 * bccsp.go，主要是接口声明，定义了BCCSP和Key接口，以及众多Opts接口，如KeyGenOpts、KeyDerivOpts、KeyImportOpts、HashOpts、SignerOpts、EncrypterOpts和DecrypterOpts。
 * keystore.go，定义了KeyStore接口，即Key的管理和存储接口。如果Key不是暂时的，则存储在实现了该接口的对象中，否则不存储。
 * *opts.go，bccsp所使用到的各种技术选项的实现。
@@ -15,8 +19,11 @@ BCCSP通过MSP（即Membership Service Provider成员关系服务提供者）给
 * [utils]目录，为工具函数包。
 * [signer]目录，实现go crypto标准库的Signer接口。
 补充：bccsp_test.go和mocks目录，可忽略。
+
 ## 2、BCCSP接口定义
+
 BCCSP接口（区块链加密服务提供者）定义如下：
+
 ```go
 type BCCSP interface {
 	KeyGen(opts KeyGenOpts) (k Key, err error) //生成Key
@@ -32,7 +39,9 @@ type BCCSP interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 Key接口（密钥）定义如下：
+
 ```go
 type Key interface {
 	Bytes() ([]byte, error) //Key转换成字节形式
@@ -43,7 +52,9 @@ type Key interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 KeyStore接口（密钥存储）定义如下：
+
 ```go
 type KeyStore interface {
 	ReadOnly() bool //密钥库是否只读，只读时StoreKey将失败
@@ -52,8 +63,11 @@ type KeyStore interface {
 }
 //代码在bccsp/keystore.go
 ```
+
 ## 3、Opts接口定义
+
 KeyGenOpts接口（密钥生成选项）定义如下：
+
 ```go
 //KeyGen(opts KeyGenOpts) (k Key, err error)
 type KeyGenOpts interface {
@@ -62,7 +76,9 @@ type KeyGenOpts interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 KeyDerivOpts接口（密钥派生选项）定义如下：
+
 ```go
 //KeyDeriv(k Key, opts KeyDerivOpts) (dk Key, err error)
 type KeyDerivOpts interface {
@@ -71,7 +87,9 @@ type KeyDerivOpts interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 KeyImportOpts接口（导入选项）定义如下：
+
 ```go
 //KeyImport(raw interface{}, opts KeyImportOpts) (k Key, err error)
 type KeyImportOpts interface {
@@ -80,7 +98,9 @@ type KeyImportOpts interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 HashOpts接口（哈希选项）定义如下：
+
 ```go
 //Hash(msg []byte, opts HashOpts) (hash []byte, err error)
 type HashOpts interface {
@@ -88,7 +108,9 @@ type HashOpts interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 SignerOpts接口（签名选项）定义如下：
+
 ```go
 //Sign(k Key, digest []byte, opts SignerOpts) (signature []byte, err error)
 //即go标准库crypto.SignerOpts接口
@@ -97,14 +119,19 @@ type SignerOpts interface {
 }
 //代码在bccsp/bccsp.go
 ```
+
 另外EncrypterOpts接口（加密选项）和DecrypterOpts接口（解密选项）均为空接口。
+
 ```go
 type EncrypterOpts interface{}
 type DecrypterOpts interface{}
 //代码在bccsp/bccsp.go
 ```
+
 ## 4、SW实现方式
+
 ### 4.1、sw目录结构
+
 SW实现方式是默认实现方式，代码在bccsp/sw。主要目录结构如下：
 
 * impl.go，bccsp的SW实现。
@@ -127,7 +154,9 @@ SW实现方式是默认实现方式，代码在bccsp/sw。主要目录结构如�
 * keyimport.go，KeyImporter接口实现，包括aes256ImportKeyOptsKeyImporter、ecdsaPKIXPublicKeyImportOptsKeyImporter、ecdsaPrivateKeyImportOptsKeyImporter、
 　　ecdsaGoPublicKeyImportOptsKeyImporter、rsaGoPublicKeyImportOptsKeyImporter、hmacImportKeyOptsKeyImporter和x509PublicKeyImportOptsKeyImporter。
 * hash.go，Hasher接口实现，即hasher。
+
 ### 4.2、SW bccsp配置
+
 即代码bccsp/sw/conf.go，config数据结构定义：
 elliptic.Curve为椭圆曲线接口，使用了crypto/elliptic包。有关椭圆曲线，参考http://8btc.com/thread-1240-1-1.html。
 SHA，全称Secure Hash Algorithm，即安全哈希算法，参考https://www.cnblogs.com/kabi/p/5871421.html。
@@ -141,10 +170,12 @@ type config struct {
 }
 //代码在bccsp/sw/conf.go
 ```
+
 func (conf *config) setSecurityLevel(securityLevel int, hashFamily string) (err error)为设置安全级别和哈希系列（包括SHA2和SHA3）。
 如果hashFamily为"SHA2"或"SHA3"，将分别调取conf.setSecurityLevelSHA2(securityLevel)或conf.setSecurityLevelSHA3(securityLevel)。
 
 func (conf *config) setSecurityLevelSHA2(level int) (err error)代码如下：
+
 ```go
 switch level {
 case 256:
@@ -161,7 +192,9 @@ case 384:
 }
 //代码在bccsp/sw/conf.go
 ```
+
 func (conf *config) setSecurityLevelSHA3(level int) (err error)代码如下：
+
 ```go
 switch level {
 case 256:
@@ -178,7 +211,9 @@ case 384:
 }
 //代码在bccsp/sw/conf.go
 ```
+
 ### 4.3、SW bccsp实例结构体定义
+
 ```go
 type impl struct {
 	conf *config //bccsp实例的配置
@@ -195,7 +230,9 @@ type impl struct {
 }
 //代码在bccsp/sw/impl.go
 ```
+
 涉及如下方法： 
+
 ```go
 func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) //生成sw实例
 func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) //生成Key
@@ -210,6 +247,7 @@ func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts
 func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error) //解密
 //代码在bccsp/sw/impl.go
 ```
+
 func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.BCCSP, error)作用为：
 设置securityLevel和hashFamily，设置keyStore、encryptors、decryptors、signers、verifiers和hashers，之后设置keyGenerators、keyDerivers和keyImporters。
 
@@ -218,6 +256,7 @@ func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error)作用为
 
 func (csp *impl) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, err error)作用为：
 按k的类型查找keyDeriver是否在csp.keyDerivers[]中，如果在则调取keyDeriver.KeyDeriv(k, opts)派生Key。如果opts.Ephemeral()不是暂时的，调取csp.ks.StoreKey存储Key。
+
 ```go
 func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error)
 func (csp *impl) Hash(msg []byte, opts bccsp.HashOpts) (digest []byte, err error)
@@ -228,8 +267,11 @@ func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts
 func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error)
 //与上述方法实现方式相似。
 ```
+
 func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error)作用为：按ski调取csp.ks.GetKey(ski)获取Key。
+
 ### 4.4、AES算法相关代码实现
+
 参考：https://studygolang.com/articles/7302。
 AES，Advanced Encryption Standard，即高级加密标准，是一种对称加密算法。
 AES属于块密码工作模式。块密码工作模式，允许使用同一个密码块对于多于一块的数据进行加密。
@@ -238,6 +280,7 @@ AES属于块密码工作模式。块密码工作模式，允许使用同一个�
 
 Fabric中使用的填充方式为：pkcs7Padding，即填充字符串由一个字节序列组成，每个字节填充该字节序列的长度。 代码如下：
 另外pkcs7UnPadding为其反操作。
+
 ```go
 func pkcs7Padding(src []byte) []byte {
 	padding := aes.BlockSize - len(src)%aes.BlockSize //计算填充长度
@@ -246,9 +289,11 @@ func pkcs7Padding(src []byte) []byte {
 }
 //代码在bccsp/sw/aes.go
 ```
+
 AES常见模式有ECB、CBC等。其中ECB，对于相同的数据块都会加密为相同的密文块，这种模式不能提供严格的数据保密性。
 而CBC模式，每个数据块都会和前一个密文块异或后再加密，这种模式中每个密文块都会依赖前一个数据块。同时为了保证每条消息的唯一性，在第一块中需要使用初始化向量。
 Fabric使用了CBC模式，代码如下：
+
 ```go
 //AES加密
 func aesCBCEncrypt(key, s []byte) ([]byte, error) {
@@ -268,6 +313,7 @@ func aesCBCEncrypt(key, s []byte) ([]byte, error) {
 }
 //代码在bccsp/sw/aes.go
 ```
+
 ```go
 //AES解密
 func aesCBCDecrypt(key, src []byte) ([]byte, error) {
@@ -283,7 +329,9 @@ func aesCBCDecrypt(key, src []byte) ([]byte, error) {
 }
 //代码在bccsp/sw/aes.go
 ```
+
 pkcs7Padding和aesCBCEncrypt整合后代码如下：
+
 ```go
 //AES加密
 func AESCBCPKCS7Encrypt(key, src []byte) ([]byte, error) {
@@ -297,8 +345,11 @@ func AESCBCPKCS7Decrypt(key, src []byte) ([]byte, error) {
 }
 //代码在bccsp/sw/aes.go
 ```
+
 ### 4.5、RSA算法相关代码实现
+
 签名相关代码如下：
+
 ```go
 type rsaSigner struct{}
 func (s *rsaSigner) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
@@ -307,7 +358,9 @@ func (s *rsaSigner) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (sig
 }
 //代码在bccsp/sw/rsa.go
 ```
+
 校验签名相关代码如下：
+
 ```go
 type rsaPrivateKeyVerifier struct{}
 func (v *rsaPrivateKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
@@ -316,6 +369,7 @@ func (v *rsaPrivateKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, op
 	/...	
 }
 ```
+
 ```go
 type rsaPublicKeyKeyVerifier struct{}
 func (v *rsaPublicKeyKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
@@ -325,7 +379,9 @@ func (v *rsaPublicKeyKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, 
 }
 //代码在bccsp/sw/rsa.go
 ```
+
 另附"crypto/rsa"包中rsaPrivateKey和rsaPublicKey定义如下：
+
 ```go
 type rsaPrivateKey struct {
 	privKey *rsa.PrivateKey
@@ -334,12 +390,17 @@ type rsaPublicKey struct {
 	pubKey *rsa.PublicKey
 }
 ```
+
 ### 4.6、椭圆曲线算法相关代码实现
+
 代码在bccsp/sw/ecdsa.go
 椭圆曲线算法，相关内容参考：[Fabric1.0源码之旅附录(1)-椭圆曲线算法](../EllipticCurveAlgorithm/EllipticCurveAlgorithm.md)
+
 ### 4.7、文件类型KeyStore接口实现
+
 虚拟类型KeyStore接口实现dummyKeyStore，无任何实际操作，忽略。
 文件类型KeyStore接口实现fileBasedKeyStore，数据结构定义如下：
+
 ```go
 type fileBasedKeyStore struct {
 	path string //路径
@@ -349,7 +410,9 @@ type fileBasedKeyStore struct {
 	m sync.Mutex //锁
 }
 ```
+
 涉及方法如下：
+
 ```go
 func NewFileBasedKeyStore(pwd []byte, path string, readOnly bool) (bccsp.KeyStore, error)
 func (ks *fileBasedKeyStore) Init(pwd []byte, path string, readOnly bool) error
@@ -369,7 +432,9 @@ func (ks *fileBasedKeyStore) createKeyStore() error
 func (ks *fileBasedKeyStore) openKeyStore() error
 func (ks *fileBasedKeyStore) getPathForAlias(alias, suffix string) string
 ```
+
 ## 20、本文使用到如下网络内容
+
 * [fabric源码解析13——peer的BCCSP服务](http://blog.csdn.net/idsuf698987/article/details/77200287)
 * [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （三）BCCSP包之工厂包](http://blog.csdn.net/lsttoy/article/details/73278445)
 * [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （四）BSSCP包之pkcs11加密包](http://blog.csdn.net/lsttoy/article/details/73292182)
