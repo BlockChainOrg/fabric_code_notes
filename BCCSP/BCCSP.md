@@ -20,7 +20,9 @@ BCCSP通过MSP（即Membership Service Provider成员关系服务提供者）给
 * [signer]目录，实现go crypto标准库的Signer接口。
 补充：bccsp_test.go和mocks目录，可忽略。
 
-## 2、BCCSP接口定义
+## 2、接口定义
+
+### 2.1、BCCSP接口定义
 
 BCCSP接口（区块链加密服务提供者）定义如下：
 
@@ -64,7 +66,7 @@ type KeyStore interface {
 //代码在bccsp/keystore.go
 ```
 
-## 3、Opts接口定义
+### 2.2、Opts接口定义
 
 KeyGenOpts接口（密钥生成选项）定义如下：
 
@@ -128,9 +130,9 @@ type DecrypterOpts interface{}
 //代码在bccsp/bccsp.go
 ```
 
-## 4、SW实现方式
+## 3、SW实现方式
 
-### 4.1、sw目录结构
+### 3.1、sw目录结构
 
 SW实现方式是默认实现方式，代码在bccsp/sw。主要目录结构如下：
 
@@ -155,7 +157,7 @@ SW实现方式是默认实现方式，代码在bccsp/sw。主要目录结构如�
 　　ecdsaGoPublicKeyImportOptsKeyImporter、rsaGoPublicKeyImportOptsKeyImporter、hmacImportKeyOptsKeyImporter和x509PublicKeyImportOptsKeyImporter。
 * hash.go，Hasher接口实现，即hasher。
 
-### 4.2、SW bccsp配置
+### 3.2、SW bccsp配置
 
 即代码bccsp/sw/conf.go，config数据结构定义：
 elliptic.Curve为椭圆曲线接口，使用了crypto/elliptic包。有关椭圆曲线，参考http://8btc.com/thread-1240-1-1.html。
@@ -212,7 +214,7 @@ case 384:
 //代码在bccsp/sw/conf.go
 ```
 
-### 4.3、SW bccsp实例结构体定义
+### 3.3、SW bccsp实例结构体定义
 
 ```go
 type impl struct {
@@ -270,7 +272,7 @@ func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpt
 
 func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error)作用为：按ski调取csp.ks.GetKey(ski)获取Key。
 
-### 4.4、AES算法相关代码实现
+### 3.4、AES算法相关代码实现
 
 参考：https://studygolang.com/articles/7302。
 AES，Advanced Encryption Standard，即高级加密标准，是一种对称加密算法。
@@ -346,7 +348,7 @@ func AESCBCPKCS7Decrypt(key, src []byte) ([]byte, error) {
 //代码在bccsp/sw/aes.go
 ```
 
-### 4.5、RSA算法相关代码实现
+### 3.5、RSA算法相关代码实现
 
 签名相关代码如下：
 
@@ -380,7 +382,7 @@ func (v *rsaPublicKeyKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, 
 //代码在bccsp/sw/rsa.go
 ```
 
-另附"crypto/rsa"包中rsaPrivateKey和rsaPublicKey定义如下：
+另附rsaPrivateKey和rsaPublicKey定义如下：
 
 ```go
 type rsaPrivateKey struct {
@@ -389,14 +391,15 @@ type rsaPrivateKey struct {
 type rsaPublicKey struct {
 	pubKey *rsa.PublicKey
 }
+//代码在bccsp/sw/rsakey.go
 ```
 
-### 4.6、椭圆曲线算法相关代码实现
+### 3.6、椭圆曲线算法相关代码实现
 
 代码在bccsp/sw/ecdsa.go
 椭圆曲线算法，相关内容参考：[Fabric1.0源码之旅附录(1)-椭圆曲线算法](../EllipticCurveAlgorithm/EllipticCurveAlgorithm.md)
 
-### 4.7、文件类型KeyStore接口实现
+### 3.7、文件类型KeyStore接口实现
 
 虚拟类型KeyStore接口实现dummyKeyStore，无任何实际操作，忽略。
 文件类型KeyStore接口实现fileBasedKeyStore，数据结构定义如下：
@@ -409,6 +412,7 @@ type fileBasedKeyStore struct {
 	pwd []byte //密码
 	m sync.Mutex //锁
 }
+//代码在bccsp/sw/fileks.go
 ```
 fileBasedKeyStore是一个基于文件夹的密钥库，每个Key都存储在分散的文件中，文件名包含密钥的SKI。
 密钥库可以用密码初始化，这个密码可以用于加密和解密存储密钥的文件。为了避免覆盖，密钥库可以设置为只读。
@@ -422,6 +426,7 @@ func (ks *fileBasedKeyStore) Init(pwd []byte, path string, readOnly bool) error 
 func (ks *fileBasedKeyStore) ReadOnly() bool //密钥库是否只读，只读时StoreKey将失败
 func (ks *fileBasedKeyStore) GetKey(ski []byte) (k bccsp.Key, err error) //如果SKI通过，返回Key。通过ski可以获取文件后缀，key、sk、pk分别为普通key、私钥、公钥
 func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error) //将Key存储到密钥库中
+//代码在bccsp/sw/fileks.go
 ```
 
 func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error)代码如下：
@@ -443,8 +448,180 @@ case *rsaPublicKey:
 case *aesPrivateKey:
 	kk := k.(*aesPrivateKey)
 	err = ks.storeKey(hex.EncodeToString(k.SKI()), kk.privKey) //AES私钥
-/...
+//...
+//代码在bccsp/sw/fileks.go
 ```
+
+## 4、pkcs11实现方式
+
+pkcs11包，即HSM基础的bccsp（the hsm-based BCCSP implementation），HSM是Hardware Security Modules，即硬件安全模块。
+pckcs11是硬件基础的加密服务实现，sw是软件基础的加密服务实现。这个硬件基础的实现以 https://github.com/miekg/pkcs11 这个库为基础。
+
+PKCS#11称为Cyptoki，定义了一套独立于技术的程序设计接口，USBKey安全应用需要实现的接口。
+在密码系统中，PKCS#11是公钥加密标准（PKCS, Public-Key Cryptography Standards）中的一份子，由RSA实验室(RSA Laboratories)发布，它为加密令牌定义了一组平台无关的API ，如硬件安全模块和智能卡。
+pkcs11包主要内容是PKCS11标准的实现及椭圆曲线算法中以low-S算法为主导的go实现。同时也通过利用RSA的一些特性和算法，丰富了PKCS11加密体系。
+
+### 4.1、pkcs11目录结构
+
+* impl.go，bccsp的pkcs11实现。
+* conf.go，bccsp的pkcs11实现的配置定义，实现代码与sw的配置定义接近，即实现设置安全级别和哈希系列。
+* pkcs11.go，以miekg/pkcs11包为基础，包装了各种pkcs11功能。
+* ecdsa.go，ECDSA算法的签名和验签的实现。
+* ecdsakey.go，ECDSA类型的Key接口实现，包括ecdsaPrivateKey和ecdsaPublicKey。
+
+### 4.2、pkcs11实例结构体定义和实现
+
+```go
+type impl struct {
+	bccsp.BCCSP //结构体中内嵌接口，参考https://studygolang.com/articles/6934
+
+	conf *config //pkcs11实例的配置
+	ks   bccsp.KeyStore //KeyStore对象，用于存储和获取Key
+
+	ctx      *pkcs11.Ctx //pkcs11上下文
+	sessions chan pkcs11.SessionHandle //即type SessionHandle uint，会话标识符通道，默认数量10
+	slot     uint	//安全硬件外设连接插槽标识号
+
+	lib          string	//pkcs11库文件所在路径
+	noPrivImport bool	//是否禁止导入私钥
+	softVerify   bool	//是否使用软件方式校验签名
+}
+//代码在bccsp/pkcs11/impl.go
+```
+
+涉及方法如下：
+
+```go
+func New(opts PKCS11Opts, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) //生成pkcs11实例
+func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) //生成Key
+func (csp *impl) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, err error) //派生Key
+func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) //导入Key
+func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error) //获取Key
+func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) //签名
+func (csp *impl) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) //校验签名
+func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts) (ciphertext []byte, err error) //加密
+func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error) //解密
+func FindPKCS11Lib() (lib, pin, label string) //从环境变量PKCS11_LIB、PKCS11_PIN、PKCS11_LABEL中获取lib、pin、label，否则取默认使用libsofthsm2.so、98765432、ForFabric
+//代码在bccsp/pkcs11/impl.go
+```
+
+func New(opts PKCS11Opts, keyStore bccsp.KeyStore) (bccsp.BCCSP, error)核心代码如下：
+
+```go
+conf := &config{}
+err := conf.setSecurityLevel(opts.SecLevel, opts.HashFamily) //初始化conf
+swCSP, err := sw.New(opts.SecLevel, opts.HashFamily, keyStore) //创建sw实例
+
+lib := opts.Library
+pin := opts.Pin
+label := opts.Label
+ctx, slot, session, err := loadLib(lib, pin, label) //加载动态库，寻找slot，打开会话并登陆会话
+
+sessions := make(chan pkcs11.SessionHandle, sessionCacheSize)
+csp := &impl{swCSP, conf, keyStore, ctx, sessions, slot, lib, opts.Sensitive, opts.SoftVerify}
+csp.returnSession(*session)
+return csp, nil
+//代码在bccsp/pkcs11/impl.go
+```
+
+loadLib(lib, pin, label)代码如下：
+* pkcs11.New(lib)根据lib路径加载动态库（如openCryptoki的动态库），并建立pkcs11实例ctx。ctx相当于fabric与安全硬件模块通信的桥梁：bccsp<–>ctx<–>驱动lib<–>安全硬件模块，只要驱动lib是按照pkcs11标准开发。
+* ctx.Initialize()进行初始化PKCS#11库。
+* 从ctx.GetSlotList(true)返回的列表中获取由label指定的插槽标识slot。注：这里的槽可以简单的理解为电脑主机上供安全硬件模块插入的槽，如USB插口，可能不止一个，每一个在系统内核中都有名字和标识号。
+* 尝试10次调用ctx.OpenSession打开一个会话session。会话就是通过通信路径与安全硬件模块建立连接，可以简单的理解为pkcs11的chan。
+* 登陆会话ctx.Login。
+* 返回ctx，slot，会话对象session，用于赋值给impl实例成员ctx，slot，把session发送到sessions里。
+pkcs11库的使用参考：Cryptoki库概述https://docs.oracle.com/cd/E19253-01/819-7056/6n91eac56/index.html
+
+```go
+var slot uint = 0
+ctx := pkcs11.New(lib) //根据lib路径加载动态库（如openCryptoki的动态库），并建立pkcs11实例ctx
+ctx.Initialize() //初始化 PKCS #11 库
+slots, err := ctx.GetSlotList(true) //可用插槽的列表
+
+found := false
+for _, s := range slots {
+	info, err := ctx.GetTokenInfo(s) //获取有关特定令牌的信息
+	if label == info.Label {
+		found = true
+		slot = s
+		break
+	}
+}
+
+var session pkcs11.SessionHandle
+for i := 0; i < 10; i++ { //尝试10次调用ctx.OpenSession打开一个会话session
+	session, err = ctx.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	if err != nil {
+		//...
+	} else {
+		break
+	}
+}
+err = ctx.Login(session, pkcs11.CKU_USER, pin) //登陆会话ctx.Login
+return ctx, slot, &session, nil //返回ctx，slot，会话对象session
+//代码在bccsp/pkcs11/pkcs11.go
+```
+
+补充type PKCS11Opts struct定义如下：
+
+```go
+type PKCS11Opts struct {
+	//...
+	//Keystore选项
+	Ephemeral     bool					//是否暂存的
+	FileKeystore  *FileKeystoreOpts		//FileKeystore
+	DummyKeystore *DummyKeystoreOpts	//DummyKeystore
+
+	// PKCS11 options
+	Library    string					//库文件路径
+	Label      string					//插槽标识
+	Pin        string					//登录密码
+	Sensitive  bool						
+	SoftVerify bool						
+}
+//代码在bccsp/pkcs11/conf.go
+```
+
+如下方法优先判断Opts或Key类型，如果为pkcs11支持的ecdsa类型，将调取pkcs11包的实现，否则调取sw包作为默认实现。
+
+```go
+func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) //生成Key
+func (csp *impl) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, err error) //派生Key
+func (csp *impl) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) //导入Key
+func (csp *impl) GetKey(ski []byte) (k bccsp.Key, err error) //获取Key
+func (csp *impl) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) //签名
+func (csp *impl) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) //校验签名
+//代码在bccsp/pkcs11/impl.go
+```
+
+如下加解密方法，将直接调取sw包的默认实现。
+
+```go
+func (csp *impl) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts) (ciphertext []byte, err error) //加密
+func (csp *impl) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error) //解密
+//代码在bccsp/pkcs11/impl.go
+```
+
+### 4.3、pkcs11对第三方包github.com/miekg/pkcs11的封装
+
+```go
+func (csp *impl) getSession() (session pkcs11.SessionHandle) //在cache为空或者完全为使用状态的时候，通过OpenSession来获取session
+func (csp *impl) returnSession(session pkcs11.SessionHandle) //关闭Session
+func (csp *impl) getECKey(ski []byte) (pubKey *ecdsa.PublicKey, isPriv bool, err error) //通过SKI, 查找EC（椭圆曲线） key
+func (csp *impl) generateECKey(curve asn1.ObjectIdentifier, ephemeral bool) (ski []byte, pubKey *ecdsa.PublicKey, err error) //生成EC key
+func (csp *impl) signP11ECDSA(ski []byte, msg []byte) (R, S *big.Int, err error) //签名
+func (csp *impl) verifyP11ECDSA(ski []byte, msg []byte, R, S *big.Int, byteSize int) (valid bool, err error) //校验签名
+func (csp *impl) importECKey(curve asn1.ObjectIdentifier, privKey, ecPt []byte, ephemeral bool, keyType bool) (ski []byte, err error) //导入EC key
+//loadLib 加载lib文件，初始化数据，通过GetSlotList来解析slot数据，通过GetTokenInfo获取token信息，通过pkcs11.SessionHandle方法来获取session
+func loadLib(lib, pin, label string) (*pkcs11.Ctx, uint, *pkcs11.SessionHandle, error)
+//findKeyPairFromSKI 通过Ctx、session及ski来获取对应的公私钥
+func findKeyPairFromSKI(mod *pkcs11.Ctx, session pkcs11.SessionHandle, ski []byte, keyType bool) (*pkcs11.ObjectHandle, error)
+//代码在bccsp/pkcs11/pkcs11.go
+```
+
+## 5、BCCSP工厂
+
 
 
 
