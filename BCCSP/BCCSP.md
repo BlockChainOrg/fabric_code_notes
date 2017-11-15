@@ -569,14 +569,14 @@ return ctx, slot, &session, nil //返回ctx，slot，会话对象session
 type PKCS11Opts struct {
 	//...
 	//Keystore选项
-	Ephemeral     bool					//是否暂存的
-	FileKeystore  *FileKeystoreOpts		//FileKeystore
-	DummyKeystore *DummyKeystoreOpts	//DummyKeystore
+	Ephemeral     bool //是否暂存的
+	FileKeystore  *FileKeystoreOpts //FileKeystore
+	DummyKeystore *DummyKeystoreOpts //DummyKeystore
 
 	// PKCS11 options
-	Library    string					//库文件路径
-	Label      string					//插槽标识
-	Pin        string					//登录密码
+	Library    string //库文件路径
+	Label      string //插槽标识
+	Pin        string //登录密码
 	Sensitive  bool						
 	SoftVerify bool						
 }
@@ -622,10 +622,168 @@ func findKeyPairFromSKI(mod *pkcs11.Ctx, session pkcs11.SessionHandle, ski []byt
 
 ## 5、BCCSP工厂
 
+通过factory可以获得两类BCCSP实例：sw和pkcs11。
+BCCSP实例是通过工厂来提供的，sw包对应的工厂在swFactory.go中实现，pkcs11包对应的工厂在pkcs11Factory.go中实现，它们都共同实现了BCCSPFactory接口。
 
+### 5.1、factory目录结构
 
+* factory.go，定义BCCSPFactory接口，声明全局变量bccspMap来保存实例化的bccsp，声明bootBCCSP来保存缺省的实例，以及定义factory初始化函数和Get函数。
+* nopkcs11.go/pkcs11.go，定义了两个版本的工厂选项FactoryOpts、初始化和Get函数。区别在于编译时是否指定nopkcs11或!nopkcs11，默认是nopkcs11。
+* opts.go，定义了默认的FactoryOpts，即SW。
+* pkcs11factory.go，pkcs11类型的bccsp工厂实现PKCS11Factory。
+* swfactory.go， sw类型的bccsp工厂实现SWFactory。
 
-## 20、本文使用到如下网络内容
+### 5.2、BCCSPFactory接口定义
+
+```go
+type BCCSPFactory interface {
+	Name() string //获取工厂名称
+	Get(opts *FactoryOpts) (bccsp.BCCSP, error) //使用FactoryOpts获取BCCSP实例
+}
+//代码在bccsp/factory/factory.go
+```
+
+nopkcs11的FactoryOpts：
+
+```go
+type FactoryOpts struct {
+	ProviderName string
+	SwOpts       *SwOpts
+}
+//代码在bccsp/factory/nopkcs11.go
+```
+
+pkcs11的FactoryOpts：
+
+```go
+type FactoryOpts struct {
+	ProviderName string
+	SwOpts       *SwOpts
+	Pkcs11Opts   *pkcs11.PKCS11Opts
+}
+//代码在bccsp/factory/pkcs11.go
+```
+
+### 5.3、swfactory实现
+
+type SWFactory struct{}
+
+涉及方法：
+
+```go
+func (f *SWFactory) Name() string //此处返回SoftwareBasedFactoryName，即"SW"
+func (f *SWFactory) Get(config *FactoryOpts) (bccsp.BCCSP, error) //使用FactoryOpts获取BCCSP实例
+//代码在bccsp/factory/swfactory.go
+```
+
+func (f *SWFactory) Get(config *FactoryOpts) (bccsp.BCCSP, error)代码如下：
+
+```go
+swOpts := config.SwOpts
+var ks bccsp.KeyStore
+if swOpts.Ephemeral == true { //密钥是暂时的
+	ks = sw.NewDummyKeyStore()
+} else if swOpts.FileKeystore != nil { //密钥是永久的并且定义了FileKeystore
+	fks, err := sw.NewFileBasedKeyStore(nil, swOpts.FileKeystore.KeyStorePath, false)
+	ks = fks
+} else {
+	ks = sw.NewDummyKeyStore() //默认是暂时的
+}
+return sw.New(swOpts.SecLevel, swOpts.HashFamily, ks) //创建sw实例
+//代码在bccsp/factory/swfactory.go
+```
+
+### 5.4、pkcs11factory实现
+
+type PKCS11Factory struct{}
+
+涉及方法：
+
+```go
+func (f *PKCS11Factory) Name() string //此处返回PKCS11BasedFactoryName，即"PKCS11"
+func (f *PKCS11Factory) Get(config *FactoryOpts) (bccsp.BCCSP, error) //使用FactoryOpts获取BCCSP实例
+//代码在bccsp/factory/pkcs11factory.go
+```
+
+func (f *PKCS11Factory) Get(config *FactoryOpts) (bccsp.BCCSP, error)代码如下：
+代码结构基本与swfactory相同，但此处有一个TODO提示。即：
+PKCS11是不需要密钥库（keystore）的，但目前还没有从PKCS11 BCCSP中拆分出去，所以这里留着待后续进行改进，因此代码实现中依然保留了一部分keystore的实现。 
+
+```go
+p11Opts := config.Pkcs11Opts
+//TODO: PKCS11 does not need a keystore, but we have not migrated all of PKCS11 BCCSP to PKCS11 yet
+var ks bccsp.KeyStore
+if p11Opts.Ephemeral == true {
+	ks = sw.NewDummyKeyStore()
+} else if p11Opts.FileKeystore != nil {
+	fks, err := sw.NewFileBasedKeyStore(nil, p11Opts.FileKeystore.KeyStorePath, false)
+	ks = fks
+} else {
+	ks = sw.NewDummyKeyStore()
+}
+return pkcs11.New(*p11Opts, ks)
+//代码在bccsp/factory/pkcs11factory.go
+```
+
+### 5.5、Factories初始化
+
+nopkcs11版本Factories初始化：
+
+```go
+factoriesInitOnce.Do(func() { //仅执行一次
+	bccspMap = make(map[string]bccsp.BCCSP) //初始化全局bccsp.BCCSP map：bccspMap
+
+	// Software-Based BCCSP
+	if config.SwOpts != nil {
+		f := &SWFactory{} //创建SWFactory
+		err := initBCCSP(f, config) //创建BCCSP实例，即调用f.Get，并加入bccspMap中
+	}
+
+	var ok bool
+	defaultBCCSP, ok = bccspMap[config.ProviderName] //将其作为默认defaultBCCSP
+})
+//代码在bccsp/factory/nopkcs11.go
+```
+
+pkcs11版本Factories初始化：
+
+```go
+func InitFactories(config *FactoryOpts) error {
+	factoriesInitOnce.Do(func() {
+		setFactories(config)
+	})
+}
+
+func setFactories(config *FactoryOpts) error {
+	bccspMap = make(map[string]bccsp.BCCSP)
+
+	// Software-Based BCCSP，如果是SW
+	if config.SwOpts != nil {
+		f := &SWFactory{}
+		err := initBCCSP(f, config)
+	}
+
+	// PKCS11-Based BCCSP，如果是PKCS11
+	if config.Pkcs11Opts != nil {
+		f := &PKCS11Factory{}
+		err := initBCCSP(f, config)
+	}
+
+	var ok bool
+	defaultBCCSP, ok = bccspMap[config.ProviderName]
+}
+//代码在bccsp/factory/pkcs11.go
+```
+
+func initBCCSP(f BCCSPFactory, config *FactoryOpts) error代码如下：
+
+```go
+csp, err := f.Get(config) //调取f.Get生成BCCSP实例
+bccspMap[f.Name()] = csp //新生成的实例，加入bccspMap中
+//代码在bccsp/factory/factory.go
+```
+
+## 6、本文使用到如下网络内容
 
 * [fabric源码解析13——peer的BCCSP服务](http://blog.csdn.net/idsuf698987/article/details/77200287)
 * [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （三）BCCSP包之工厂包](http://blog.csdn.net/lsttoy/article/details/73278445)
