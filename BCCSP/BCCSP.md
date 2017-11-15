@@ -783,7 +783,7 @@ bccspMap[f.Name()] = csp //新生成的实例，加入bccspMap中
 //代码在bccsp/factory/factory.go
 ```
 
-## 6、本文使用到如下网络内容
+## 6、本文使用到的网络内容
 
 * [fabric源码解析13——peer的BCCSP服务](http://blog.csdn.net/idsuf698987/article/details/77200287)
 * [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （三）BCCSP包之工厂包](http://blog.csdn.net/lsttoy/article/details/73278445)
