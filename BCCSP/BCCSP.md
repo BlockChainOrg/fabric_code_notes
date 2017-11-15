@@ -410,28 +410,43 @@ type fileBasedKeyStore struct {
 	m sync.Mutex //锁
 }
 ```
+fileBasedKeyStore是一个基于文件夹的密钥库，每个Key都存储在分散的文件中，文件名包含密钥的SKI。
+密钥库可以用密码初始化，这个密码可以用于加密和解密存储密钥的文件。为了避免覆盖，密钥库可以设置为只读。
+
 
 涉及方法如下：
 
 ```go
-func NewFileBasedKeyStore(pwd []byte, path string, readOnly bool) (bccsp.KeyStore, error)
-func (ks *fileBasedKeyStore) Init(pwd []byte, path string, readOnly bool) error
-func (ks *fileBasedKeyStore) ReadOnly() bool
-func (ks *fileBasedKeyStore) GetKey(ski []byte) (k bccsp.Key, err error)
-func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error)
-func (ks *fileBasedKeyStore) searchKeystoreForSKI(ski []byte) (k bccsp.Key, err error)
-func (ks *fileBasedKeyStore) getSuffix(alias string) string
-func (ks *fileBasedKeyStore) storePrivateKey(alias string, privateKey interface{}) error
-func (ks *fileBasedKeyStore) storePublicKey(alias string, publicKey interface{}) error
-func (ks *fileBasedKeyStore) storeKey(alias string, key []byte) error
-func (ks *fileBasedKeyStore) loadPrivateKey(alias string) (interface{}, error)
-func (ks *fileBasedKeyStore) loadPublicKey(alias string) (interface{}, error)
-func (ks *fileBasedKeyStore) loadKey(alias string) ([]byte, error)
-func (ks *fileBasedKeyStore) createKeyStoreIfNotExists() error
-func (ks *fileBasedKeyStore) createKeyStore() error
-func (ks *fileBasedKeyStore) openKeyStore() error
-func (ks *fileBasedKeyStore) getPathForAlias(alias, suffix string) string
+func NewFileBasedKeyStore(pwd []byte, path string, readOnly bool) (bccsp.KeyStore, error) //创建fileBasedKeyStore，并调用Init完成初始化
+func (ks *fileBasedKeyStore) Init(pwd []byte, path string, readOnly bool) error //初始化路径、密码、是否只读，以及创建并打开KeyStore
+func (ks *fileBasedKeyStore) ReadOnly() bool //密钥库是否只读，只读时StoreKey将失败
+func (ks *fileBasedKeyStore) GetKey(ski []byte) (k bccsp.Key, err error) //如果SKI通过，返回Key。通过ski可以获取文件后缀，key、sk、pk分别为普通key、私钥、公钥
+func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error) //将Key存储到密钥库中
 ```
+
+func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error)代码如下：
+
+```go
+switch k.(type) {
+case *ecdsaPrivateKey:
+	kk := k.(*ecdsaPrivateKey)
+	err = ks.storePrivateKey(hex.EncodeToString(k.SKI()), kk.privKey) //ECDSA私钥
+case *ecdsaPublicKey:
+	kk := k.(*ecdsaPublicKey)
+	err = ks.storePublicKey(hex.EncodeToString(k.SKI()), kk.pubKey) //ECDSA公钥
+case *rsaPrivateKey:
+	kk := k.(*rsaPrivateKey)
+	err = ks.storePrivateKey(hex.EncodeToString(k.SKI()), kk.privKey) //RSA私钥
+case *rsaPublicKey:
+	kk := k.(*rsaPublicKey)
+	err = ks.storePublicKey(hex.EncodeToString(k.SKI()), kk.pubKey) //RSA公钥
+case *aesPrivateKey:
+	kk := k.(*aesPrivateKey)
+	err = ks.storeKey(hex.EncodeToString(k.SKI()), kk.privKey) //AES私钥
+/...
+```
+
+
 
 ## 20、本文使用到如下网络内容
 
