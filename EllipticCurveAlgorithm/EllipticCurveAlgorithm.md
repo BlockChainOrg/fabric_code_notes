@@ -181,7 +181,7 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool //使用公钥验�
 //代码在crypto/ecdsa/ecdsa.go
 ```
 
-## 4、参考文档
+## 4、本文使用到的网络内容
 
 * [初学者如何理解射影平面](https://wenku.baidu.com/view/3d245b608e9951e79b892768.html)
 * [ECC椭圆曲线详解(有具体实例)](http://www.cnblogs.com/Kalafinaian/p/7392505.html)
