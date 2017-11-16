@@ -107,6 +107,49 @@ mainCmd.AddCommand(channel.Cmd(nil))
 
 mainCmd.Execute()为命令启动。
 
+如下为mainCmd.AddCommand(node.Cmd()) peer node相关命令的加载（与上述代码相似）：
+
+```go
+func Cmd() *cobra.Command {
+	nodeCmd.AddCommand(startCmd()) //peer node start
+	nodeCmd.AddCommand(statusCmd()) //peer node status
+
+	return nodeCmd
+}
+
+var nodeCmd = &cobra.Command{
+	Use:   nodeFuncName,
+	Short: fmt.Sprint(shortDes),
+	Long:  fmt.Sprint(longDes),
+}
+//代码在peer/node/node.go　
+```
+
+以及nodeCmd.AddCommand(startCmd()) peer node start相关命令的加载：
+
+```go
+func startCmd() *cobra.Command {
+	flags := nodeStartCmd.Flags()
+	flags.BoolVarP(&chaincodeDevMode, "peer-chaincodedev", "", false, //chaincodedev
+		"Whether peer in chaincode development mode")
+	flags.BoolVarP(&peerDefaultChain, "peer-defaultchain", "", false, //defaultchain
+		"Whether to start peer with chain testchainid")
+	flags.StringVarP(&orderingEndpoint, "orderer", "o", "orderer:7050", "Ordering service endpoint") //orderer
+
+	return nodeStartCmd
+}
+
+var nodeStartCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Starts the node.",
+	Long:  `Starts a node that interacts with the network.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return serve(args) //peer node start实际代码
+	},
+}
+//代码在peer/node/start.go　
+```
+
 ## 3、初始化日志系统（输出对象、日志格式、日志级别）
 
 如下为初始日志系统代码入口，其中loggingSpec取自环境变量CORE_LOGGING_LEVEL或配置文件中logging.peer，即：全局的默认日志级别。
@@ -292,7 +335,11 @@ factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源
 
 MSP相关深入内容，参考：[Fabric 1.0源码之旅(3)-MSP（成员关系服务提供者）](msp/msp.md)
 
-## 5、
+至此，peer/main.go结束，接下来将进入peer/node/start.go中serve(args)函数。
+
+## 5、初始化账本管理
+
+
 
 ## 10、本文使用到的网络内容
 
