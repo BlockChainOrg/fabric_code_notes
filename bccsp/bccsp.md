@@ -1,6 +1,6 @@
 # Fabric 1.0源码之旅(2)-BCCSP
 
-Peer节点启动流程，涉及BCCSP，本文专门详解BCCSP。
+Peer节点启动流程，涉及BCCSP，本文专门讲解BCCSP。
 
 ## 1、BCCSP概要
 
