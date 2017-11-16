@@ -269,14 +269,13 @@ func EnhancedExactUnmarshalKey(baseKey string, output interface{}) error {
 如下代码为mspmgmt.LoadLocalMsp(mspMgrConfigDir, bccspConfig, localMSPID)的具体实现，从指定目录中加载本地MSP。
 
 ```go
-conf, err := msp.GetLocalMspConfig(dir, bccspConfig, mspID)
-return GetLocalMSP().Setup(conf)
+conf, err := msp.GetLocalMspConfig(dir, bccspConfig, mspID) //获取本地MSP配置，序列化后写入msp.MSPConfig，即conf
+return GetLocalMSP().Setup(conf) //调取msp.NewBccspMsp()创建bccspmsp实例，调取bccspmsp.Setup(conf)解码conf.Config并设置bccspmsp
 //代码在msp/mgmt/mgmt.go
 ```
 
 如下代码为msp.GetLocalMspConfig(dir, bccspConfig, mspID)的具体实现。
-SetupBCCSPKeystoreConfigSetupBCCSPKeystoreConfig()核心代码为bccspConfig.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: keystoreDir}，
-目的是在FileKeystore或KeyStorePath为空时设置默认值。
+SetupBCCSPKeystoreConfig()核心代码为bccspConfig.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: keystoreDir}，目的是在FileKeystore或KeyStorePath为空时设置默认值。
 
 ```go
 signcertDir := filepath.Join(dir, signcerts) //signcerts为"signcerts"，signcertDir即/etc/hyperledger/fabric/msp/signcerts/
@@ -284,15 +283,13 @@ keystoreDir := filepath.Join(dir, keystore) //keystore为"keystore"，keystoreDi
 bccspConfig = SetupBCCSPKeystoreConfig(bccspConfig, keystoreDir) //设置bccspConfig.SwOpts.Ephemeral = false和bccspConfig.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: keystoreDir}
 	//bccspConfig.SwOpts.Ephemeral是否短暂的
 err := factory.InitFactories(bccspConfig) //初始化bccsp factory，并创建bccsp实例
-signcert, err := getPemMaterialFromDir(signcertDir)
-sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
-return getMspConfig(dir, ID, sigid)
+signcert, err := getPemMaterialFromDir(signcertDir) //读取X.509证书的PEM文件
+sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil} //构造SigningIdentityInfo
+return getMspConfig(dir, ID, sigid) //分别读取cacerts、admincerts、tlscacerts文件，以及config.yaml中组织信息，构造msp.FabricMSPConfig，序列化后用于构造msp.MSPConfig
 //代码在msp/configbuilder.go
 ```
-factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码之旅(2)-BCCSP](../bccsp/bccsp.md)
-
-
-
+factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码之旅(2)-BCCSP（区块链加密服务提供者）](../bccsp/bccsp.md)
+MSP相关深入内容，参考：[Fabric 1.0源码之旅(3)-MSP（成员关系服务提供者）](msp/msp.md)
 
 ## 10、本文使用到的网络内容
 
