@@ -292,8 +292,11 @@ return getMspConfig(dir, ID, sigid) //分别读取cacerts、admincerts、tlscace
 
 mgmt涉及方法如下：
 
+```go
 func LoadLocalMsp(dir string, bccspConfig *factory.FactoryOpts, mspID string) error //从指定目录加载本地MSP
 func GetLocalMSP() msp.MSP //调取msp.NewBccspMsp()创建bccspmsp实例
+//代码在msp/mgmt/mgmt.go
+```
 
 func LoadLocalMsp(dir string, bccspConfig *factory.FactoryOpts, mspID string) error代码如下：
 
