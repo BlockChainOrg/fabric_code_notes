@@ -8,7 +8,8 @@ MSP，全称Membership Service Provider，即成员关系服务提供者，作�
 MSP的核心代码在msp目录下，其他相关代码分布在common/config/msp、protos/msp下。目录结构如下：
 
 * msp
-** msp.go
+	* msp.go
+	* mspimpl.go
 
 common/config/msp目录下结构：
 
