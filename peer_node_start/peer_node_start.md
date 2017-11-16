@@ -289,53 +289,10 @@ sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
 return getMspConfig(dir, ID, sigid)
 //代码在msp/configbuilder.go
 ```
+factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码之旅(2)-BCCSP](../bccsp/bccsp.md)
 
-如下代码为factory.InitFactories(bccspConfig)的具体实现。
 
-```go
-bccspMap = make(map[string]bccsp.BCCSP)
-f := &SWFactory{}
-err := initBCCSP(f, config)
-defaultBCCSP, ok = bccspMap[config.ProviderName]
-//代码在bccsp/factory/nopkcs11.go
-```
 
-如下代码为initBCCSP(f, config)的具体实现。
-
-```go
-csp, err := f.Get(config)
-bccspMap[f.Name()] = csp
-//代码在bccsp/factory/factory.go
-```
-
-如下代码为f.Get(config)的具体实现。其中sw.NewFileBasedKeyStore(nil, swOpts.FileKeystore.KeyStorePath, false) 为创建并打开一个fileBasedKeyStore，
-该对象实现了bccsp.KeyStore接口，支持key文件的读取和存储。
-f.Get(config)返回值为bccsp.BCCSP接口类型，bccsp.sw.impl为其实现，对象由sw.New(swOpts.SecLevel, swOpts.HashFamily, ks)创建。
-
-```go
-swOpts := config.SwOpts
-var ks bccsp.KeyStore
-fks, err := sw.NewFileBasedKeyStore(nil, swOpts.FileKeystore.KeyStorePath, false) //创建并打开一个fileBasedKeyStore，该对象实现了bccsp.KeyStore接口
-ks = fks
-return sw.New(swOpts.SecLevel, swOpts.HashFamily, ks)
-//代码在bccsp/factory/swfactory.go
-```
-
-bccsp.KeyStore接口定义如下：
-
-```go
-type KeyStore interface {
-	ReadOnly() bool
-	GetKey(ski []byte) (k Key, err error)
-	StoreKey(k Key) (err error)
-}
-```
-
-如下代码为为sw.New(swOpts.SecLevel, swOpts.HashFamily, ks)的具体实现。
-
-```go
-//代码在bccsp/sw/impl.go
-```
 
 ## 10、本文使用到的网络内容
 

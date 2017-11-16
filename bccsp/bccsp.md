@@ -397,7 +397,7 @@ type rsaPublicKey struct {
 ### 3.6、椭圆曲线算法相关代码实现
 
 代码在bccsp/sw/ecdsa.go
-椭圆曲线算法，相关内容参考：[Fabric1.0源码之旅附录(1)-椭圆曲线算法](../EllipticCurveAlgorithm/EllipticCurveAlgorithm.md)
+椭圆曲线算法，相关内容参考：[Fabric1.0源码之旅附录(1)-椭圆曲线算法](../elliptic_curve_algorithm/elliptic_curve_algorithm.md)
 
 ### 3.7、文件类型KeyStore接口实现
 
