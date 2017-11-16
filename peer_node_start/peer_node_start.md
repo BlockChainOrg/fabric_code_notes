@@ -182,7 +182,7 @@ flogging.InitBackend(flogging.SetFormat(viper.GetString("logging.format")), logO
 //代码在peer/main.go
 ```
 
-## 4、初始化MSP（Membership Service Provider会员服务提供者）
+## 4、初始化 MSP （Membership Service Provider会员服务提供者）
 
 如下代码为初始化MSP，获取peer.mspConfigPath路径和peer.localMspId，分别表示MSP的本地路径（/etc/hyperledger/fabric/msp/）和Peer所关联的MSP ID，并初始化组织和身份信息。
 
@@ -282,8 +282,8 @@ SetupBCCSPKeystoreConfigSetupBCCSPKeystoreConfig()核心代码为bccspConfig.SwO
 signcertDir := filepath.Join(dir, signcerts) //signcerts为"signcerts"，signcertDir即/etc/hyperledger/fabric/msp/signcerts/
 keystoreDir := filepath.Join(dir, keystore) //keystore为"keystore"，keystoreDir即/etc/hyperledger/fabric/msp/keystore/
 bccspConfig = SetupBCCSPKeystoreConfig(bccspConfig, keystoreDir) //设置bccspConfig.SwOpts.Ephemeral = false和bccspConfig.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: keystoreDir}
-//bccspConfig.SwOpts.Ephemeral是否短暂的
-err := factory.InitFactories(bccspConfig) //
+	//bccspConfig.SwOpts.Ephemeral是否短暂的
+err := factory.InitFactories(bccspConfig) //初始化bccsp factory，并创建bccsp实例
 signcert, err := getPemMaterialFromDir(signcertDir)
 sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
 return getMspConfig(dir, ID, sigid)
