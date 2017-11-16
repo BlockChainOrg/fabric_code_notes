@@ -161,11 +161,85 @@ err = msp.validateIdentityOUs(id) //验证身份中所携带的组织信息有�
 
 ## 4、MSPManager接口实现
 
+结构体定义：
 
+```go
+type mspManagerImpl struct {
+	mspsMap map[string]MSP //MSP的映射
+	up bool //是否正常启用
+}
+//代码在msp/mspmgrimpl.go
+```
 
+方法：
 
+```go
+func NewMSPManager() MSPManager //创建mspManagerImpl实例
+func (mgr *mspManagerImpl) Setup(msps []MSP) error //将msps装入mgr.mspsMap
+func (mgr *mspManagerImpl) GetMSPs() (map[string]MSP, error) //获取mgr.mspsMap
+func (mgr *mspManagerImpl) DeserializeIdentity(serializedID []byte) (Identity, error) //调用msp.DeserializeIdentity()实现身份反序列化
+//代码在msp/mspmgrimpl.go
+```
 
+## 5、Identity、SigningIdentity接口实现
 
+identity结构体定义（身份）：
+
+```go
+type identity struct {
+	id *IdentityIdentifier //身份标识符（含Mspid和Id，均为string）
+	cert *x509.Certificate //代表身份的x509证书
+	pk bccsp.Key //身份公钥
+	msp *bccspmsp //拥有此实例的MSP实例
+}
+//代码在msp/identities.go
+```
+
+补充IdentityIdentifier结构体定义（身份标识符）：
+
+```go
+type IdentityIdentifier struct {
+	Mspid string //Msp id
+	Id string //Id
+}
+//代码在msp/msp.go
+```
+
+identity结构体涉及方法如下：
+
+```go
+func newIdentity(id *IdentityIdentifier, cert *x509.Certificate, pk bccsp.Key, msp *bccspmsp) (Identity, error) //创建identity实例
+func NewSerializedIdentity(mspID string, certPEM []byte) ([]byte, error) //新建身份SerializedIdentity并序列化
+func (id *identity) SatisfiesPrincipal(principal *msp.MSPPrincipal) error //调用msp的SatisfiesPrincipal检查身份与principal中所描述的类型是否匹配
+func (id *identity) GetIdentifier() *IdentityIdentifier //获取id.id
+func (id *identity) GetMSPIdentifier() string //获取id.id.Mspid
+func (id *identity) Validate() error //调取id.msp.Validate(id)校验身份是否有效
+func (id *identity) GetOrganizationalUnits() []*OUIdentifier //获取组织单元
+func (id *identity) Verify(msg []byte, sig []byte) error //用这个身份校验消息签名
+func (id *identity) Serialize() ([]byte, error)//身份序列化
+func (id *identity) getHashOpt(hashFamily string) (bccsp.HashOpts, error) //调取bccsp.GetHashOpt
+//代码在msp/identities.go
+```
+
+signingidentity结构体定义（签名身份）：
+
+```go
+type signingidentity struct {
+	identity //嵌入identity
+	signer crypto.Signer //crypto标准库中Signer接口
+}
+//代码在msp/identities.go
+```
+
+signingidentity结构体涉及方法如下：
+
+```go
+//新建signingidentity实例
+func newSigningIdentity(id *IdentityIdentifier, cert *x509.Certificate, pk bccsp.Key, signer crypto.Signer, msp *bccspmsp) (SigningIdentity, error) 
+func (id *signingidentity) Sign(msg []byte) ([]byte, error) //签名msg
+func (id *signingidentity) GetPublicVersion() Identity //获取id.identity
+//代码在msp/identities.go
+```
 
 
 ## 6、本文使用到的网络内容
