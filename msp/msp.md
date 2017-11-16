@@ -306,7 +306,7 @@ return GetLocalMSP().Setup(conf) //调取msp.NewBccspMsp()创建bccspmsp实例�
 //代码在msp/mgmt/mgmt.go
 ```
 
-## 10、本文使用到的网络内容
+## 8、本文使用到的网络内容
 
 * [成员服务提供者（MSP）](https://hyperledgercn.github.io/hyperledgerDocs/msp_zh/)
 * [MSP&ACL](https://hyperledgercn.github.io/hyperledgerDocs/msp_acl_zh/)
