@@ -289,7 +289,10 @@ return getMspConfig(dir, ID, sigid) //分别读取cacerts、admincerts、tlscace
 //代码在msp/configbuilder.go
 ```
 factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码之旅(2)-BCCSP（区块链加密服务提供者）](../bccsp/bccsp.md)
+
 MSP相关深入内容，参考：[Fabric 1.0源码之旅(3)-MSP（成员关系服务提供者）](msp/msp.md)
+
+## 5、
 
 ## 10、本文使用到的网络内容
 
