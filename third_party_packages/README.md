@@ -4,3 +4,4 @@
 * **cobra**，https://github.com/spf13/cobra，第三方交互式命令行工具包。
 * **go-logging**，https://github.com/op/go-logging，第三方日志系统包。
 * **grpclog**，即google.golang.org/grpc/grpclog，github地址为https://github.com/grpc/grpc-go，Golang gRPC log。
+* **goleveldb**，https://github.com/syndtr/goleveldb/，LevelDB包。
