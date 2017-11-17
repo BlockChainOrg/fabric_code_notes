@@ -1,6 +1,6 @@
 # Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）
 
-## 1、BCCSP概要
+## 1、BCCSP概述
 
 BCCSP，全称Blockchain Cryptographic Service Provider，即区块链加密服务提供者，为Fabric提供加密标准和算法的实现，包括哈希、签名、校验、加解密等。
 BCCSP通过MSP（即Membership Service Provider成员关系服务提供者）给核心功能和客户端SDK提供加密算法相关服务。

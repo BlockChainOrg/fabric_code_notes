@@ -277,5 +277,3 @@ MSP（成员关系服务提供者）更详细内容，参考：[Fabric 1.0源码
 * [fabric源码解析2——peer命令结构](http://blog.csdn.net/idsuf698987/article/details/75034998)
 * [fabric源码解析3——日志系统](http://blog.csdn.net/idsuf698987/article/details/75223986)
 * [fabric源码解析4——配置系统](http://blog.csdn.net/idsuf698987/article/details/75224228)
-* [fabric源码解析12——peer的MSP服务](http://blog.csdn.net/idsuf698987/article/details/77103011)
-* [fabric源码解析13——peer的BCCSP服务](http://blog.csdn.net/idsuf698987/article/details/77200287)

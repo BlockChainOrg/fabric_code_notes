@@ -1,6 +1,6 @@
 # Fabric 1.0源码旅程 之 MSP（成员关系服务提供者）
 
-## 1、MSP概要
+## 1、MSP概述
 
 MSP，全称Membership Service Provider，即成员关系服务提供者，作用为管理Fabric中的众多参与者。
 

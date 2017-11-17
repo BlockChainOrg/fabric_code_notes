@@ -1,6 +1,6 @@
 # Fabric 1.0源码旅程 之 flogging（Fabric日志系统）
 
-## 1、flogging概要
+## 1、flogging概述
 
 flogging，即fabric logging，对第三方日志包go-logging做了封装，供全局使用。go-logging地址：https://github.com/op/go-logging。
 flogging代码集中在common/flogging目录下，包括logging.go和grpclogger.go。
