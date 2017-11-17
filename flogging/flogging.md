@@ -128,22 +128,75 @@ func (l *moduleLeveled) GetLevel(module string) Level {
 
 flogging包封装的方法，如下：
 
-* func Reset() {
-* func SetFormat(formatSpec string) logging.Formatter {
-* func InitBackend(formatter logging.Formatter, output io.Writer) {
-* func DefaultLevel() string {
-* func (l *moduleLeveled) GetLevel(module string) Level {
-* func GetModuleLevel(module string) string {
-* func SetModuleLevel(moduleRegExp string, level string) (string, error) {
-* func setModuleLevel(moduleRegExp string, level string, isRegExp bool, revert bool) (string, error) {
-* func MustGetLogger(module string) *logging.Logger {
-* func LogLevel(level string) (Level, error) {
-* func InitFromSpec(spec string) string {
-* func SetPeerStartupModulesMap() {
-* func GetPeerStartupLevel(module string) string {
-* func RevertToPeerStartupLevels() error {
+```go
+func Reset() //全局变量初始化为默认值
+func SetFormat(formatSpec string) logging.Formatter //设置并获取go-logging日志格式
+func InitBackend(formatter logging.Formatter, output io.Writer) //创建一个日志输出对象并设置输出格式和日志级别
+func DefaultLevel() string //获取defaultLevel
+func GetModuleLevel(module string) string //调用logging.GetLevel(module)获取模块日志级别
+func SetModuleLevel(moduleRegExp string, level string) (string, error) //包装setModuleLevel
+func setModuleLevel(moduleRegExp string, level string, isRegExp bool, revert bool) (string, error) //设置模块日志级别并更新modules
+func MustGetLogger(module string) *logging.Logger //创建logging.Logger实例，获取模块日志级别，并更新modules
+func InitFromSpec(spec string) string //设置各模块日志级别，并更新modules
+func SetPeerStartupModulesMap() //modules内容复制给peerStartModules
+func GetPeerStartupLevel(module string) string //从peerStartModules中获取模块日志级别
+func RevertToPeerStartupLevels() error //按peerStartModules中内容，设置模块日志级别并更新modules
+//代码在common/flogging/logging.go
+```
+
+## 4、grpclogger实现
+
+grpclogger结构体定义：
+
+```go
+type grpclogger struct {
+	logger *logging.Logger
+}
+//代码在common/flogging/grpclogger.go
+```
+
+grpclogger初始化：
+
+```go
+func initgrpclogger() {
+	glogger := MustGetLogger(GRPCModuleID)  //创建logging.Logger对象，获取模块日志级别，并更新modules
+	grpclog.SetLogger(&grpclogger{glogger}) //用创建的logging.Logger对象设置grpclog
+}
+//代码在common/flogging/grpclogger.go
+```
+
+其他方法均为对go-logging的包装，代码如下：
+
+```go
+func (g *grpclogger) Fatal(args ...interface{}) {
+	g.logger.Fatal(args...)
+}
+
+func (g *grpclogger) Fatalf(format string, args ...interface{}) {
+	g.logger.Fatalf(format, args...)
+}
+
+func (g *grpclogger) Fatalln(args ...interface{}) {
+	g.logger.Fatal(args...)
+}
+
+// NOTE: grpclog does not support leveled logs so for now use DEBUG
+func (g *grpclogger) Print(args ...interface{}) {
+	g.logger.Debug(args...)
+}
+
+func (g *grpclogger) Printf(format string, args ...interface{}) {
+	g.logger.Debugf(format, args...)
+}
+
+func (g *grpclogger) Println(args ...interface{}) {
+	g.logger.Debug(args...)
+}
+//代码在common/flogging/grpclogger.go
+```
 
 ## 5、本文使用到的网络内容
 
+* [go-logging的使用](https://studygolang.com/articles/10845)
 * [fabric源码解析3——日志系统](http://blog.csdn.net/idsuf698987/article/details/75223986)
 
