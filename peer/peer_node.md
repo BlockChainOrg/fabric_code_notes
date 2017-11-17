@@ -43,7 +43,9 @@ var nodeStartCmd = &cobra.Command{
 //代码在peer/node/start.go
 ```
 
-**注：如下内容均为serve(args)的代码。**
+**注：如下内容均为serve(args)的代码，即peer node start命令执行流程。**
 
 ## 2、初始化账本管理
+
+
 
