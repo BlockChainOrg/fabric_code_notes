@@ -10,17 +10,7 @@ flogging代码集中在common/flogging目录下，包括logging.go和grpclogger.
 
 ## 2、flogging的常量和全局变量
 
-涉及常量如下：
-
-```go
-const (
-	pkgLogID      = "flogging" //仅在flogging包内代码使用的go-logging名称
-	//defaultFormat为默认的日志格式
-	defaultFormat = "`%`{color}`%`{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}"
-	defaultLevel  = logging.INFO //默认的日志级别
-)
-//代码在common/flogging/logging.go
-```
+涉及常量：pkgLogID、defaultFormat和defaultLevel，分别表示仅在flogging包内代码使用的go-logging名称、默认的日志格式和默认的日志级别。
 
 涉及全局变量如下：
 
