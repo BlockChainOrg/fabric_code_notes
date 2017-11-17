@@ -1,6 +1,4 @@
-# Fabric 1.0源码之旅(2)-BCCSP（区块链加密服务提供者）
-
-Peer节点启动流程，涉及BCCSP，本文专门讲解BCCSP。
+# Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）
 
 ## 1、BCCSP概要
 
@@ -397,7 +395,7 @@ type rsaPublicKey struct {
 ### 3.6、椭圆曲线算法相关代码实现
 
 代码在bccsp/sw/ecdsa.go
-椭圆曲线算法，相关内容参考：[Fabric1.0源码之旅附录(1)-椭圆曲线算法](../elliptic_curve_algorithm/elliptic_curve_algorithm.md)
+椭圆曲线算法，相关内容参考：[Fabric 1.0源码旅程 之 附录-ECDSA（椭圆曲线数字签名算法）](../ecdsa/ecdsa.md)
 
 ### 3.7、文件类型KeyStore接口实现
 

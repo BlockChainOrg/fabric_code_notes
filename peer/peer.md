@@ -1,6 +1,4 @@
-# Fabric 1.0源码之旅(1)-Peer节点启动流程
-
-如下内容从peer/main.go开始。
+# Fabric 1.0源码旅程 之 Peer
 
 ## 1、加载环境变量配置和配置文件
 
@@ -331,9 +329,9 @@ sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
 return getMspConfig(dir, ID, sigid) //分别读取cacerts、admincerts、tlscacerts文件，以及config.yaml中组织信息，构造msp.FabricMSPConfig，序列化后用于构造msp.MSPConfig
 //代码在msp/configbuilder.go
 ```
-factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码之旅(2)-BCCSP（区块链加密服务提供者）](../bccsp/bccsp.md)
+factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）](../bccsp/bccsp.md)
 
-MSP相关深入内容，参考：[Fabric 1.0源码之旅(3)-MSP（成员关系服务提供者）](msp/msp.md)
+MSP相关深入内容，参考：[Fabric 1.0源码旅程 之 MSP（成员关系服务提供者）](../msp/msp.md)
 
 至此，peer/main.go结束，接下来将进入peer/node/start.go中serve(args)函数。
 
