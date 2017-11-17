@@ -29,7 +29,43 @@ Fabric中LevelDB代码，分布在common/ledger/util/leveldbhelper目录，目�
 * leveldb_provider.go，定义了结构体Provider、Provider、UpdateBatch、Iterator及其方法。
 * leveldb_helper.go，定义了DB结构体及方法。
 
+## 2、DB结构体及方法
 
+DB结构体定义：对实际数据存储的包装。
+
+```go
+type Conf struct {
+	DBPath string //路径
+}
+
+type DB struct {
+	conf    *Conf //配置
+	db      *leveldb.DB //leveldb.DB对象
+	dbState dbState //type dbState int32
+	mux     sync.Mutex //锁
+
+	readOpts        *opt.ReadOptions
+	writeOptsNoSync *opt.WriteOptions
+	writeOptsSync   *opt.WriteOptions
+}
+//代码在common/ledger/util/leveldbhelper/leveldb_helper.go
+```
+
+涉及如下方法：对goleveldb包做了封装。
+
+```go
+func CreateDB(conf *Conf) *DB //创建DB实例
+func (dbInst *DB) Open() //leveldb.OpenFile，创建并打开leveldb数据库（如目录不存在则创建）
+func (dbInst *DB) Close() //db.Close()
+func (dbInst *DB) Get(key []byte) ([]byte, error) //db.Get
+func (dbInst *DB) Put(key []byte, value []byte, sync bool) error //db.Put
+func (dbInst *DB) Delete(key []byte, sync bool) error //db.Delete
+func (dbInst *DB) GetIterator(startKey []byte, endKey []byte) iterator.Iterator //db.NewIterator，创建迭代器
+func (dbInst *DB) WriteBatch(batch *leveldb.Batch, sync bool) error //db.Write，批量写入
+//代码在common/ledger/util/leveldbhelper/leveldb_helper.go
+```
+
+## 
 
 ## 10、本文使用到的网络内容
 
