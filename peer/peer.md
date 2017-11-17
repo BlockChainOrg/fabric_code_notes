@@ -1,6 +1,27 @@
 # Fabric 1.0源码旅程 之 Peer
 
-## 1、加载环境变量配置和配置文件
+## 1、Peer概要
+
+在Fabric中，Peer（节点）是指在网络中负责接收交易请求、维护一致账本的各个fabric-peer实例。节点之间彼此通过gRPC通信。
+按角色划分，Peer包括两种类型：
+* Endorser（背书者）：负责对来自客户端的交易提案进行检查和背书。
+* Committer（提交者）：负责检查交易请求，执行交易并维护区块链和账本结构。
+
+Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos/peer目录下。目录结构如下：
+
+* peer
+	* main.go，peer命令入口。
+	* node目录，peer node命令及子命令peer node start和peer node status实现。
+	* channel目录，peer channel命令及子命令实现。
+	* chaincode目录，peer chaincode命令及子命令实现。
+	* clilogging目录，peer clilogging命令及子命令实现。
+	* version目录，peer version命令实现。
+	* common目录，peer相关通用代码。
+	* gossip目录，gossip最终一致性算法相关代码。
+	
+## 2、peer命令入口及加载子命令
+
+### 2.1、加载环境变量配置和配置文件
 
 Fabric支持通过环境变量对部分配置进行更新，如：CORE_LOGGING_LEVEL为输出的日志级别、CORE_PEER_ID为Peer的ID等。
 此部分功能由第三方包viper来实现，viper除支持环境变量的配置方式外，还支持配置文件方式。viper使用方法参考：https://github.com/spf13/viper。
@@ -47,14 +68,13 @@ viper.SetConfigName(configName)
 //代码在core/config/config.go
 ```
 
-## 2、加载命令行工具和根命令
+### 2.2、加载命令行工具和命令
 
 Fabric支持类似peer node start、peer channel create、peer chaincode install这种命令、子命令、命令选项的命令行形式。
 此功能由第三方包cobra来实现，以peer chaincode install -n test_cc -v 1.0 -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02为例，
 其中peer、chaincode、install、-n分别为命令、子命令、子命令的子命令、命令选项。
 
 如下代码为mainCmd的初始化，其中Use为命令名称，PersistentPreRunE先于Run执行用于初始化日志系统，Run此处用于打印版本信息或帮助信息。cobra使用方法参考：https://github.com/spf13/cobra。
-初始化日志系统代码flogging.InitFromSpec(loggingSpec)下文另行分析。
 
 ```go
 var mainCmd = &cobra.Command{
@@ -65,7 +85,7 @@ var mainCmd = &cobra.Command{
 		if loggingSpec == "" {
 			loggingSpec = viper.GetString("logging.peer")
 		}
-		flogging.InitFromSpec(loggingSpec)
+		flogging.InitFromSpec(loggingSpec) //初始化flogging日志系统
 
 		return nil
 	},
@@ -105,50 +125,7 @@ mainCmd.AddCommand(channel.Cmd(nil))
 
 mainCmd.Execute()为命令启动。
 
-如下为mainCmd.AddCommand(node.Cmd()) peer node相关命令的加载（与上述代码相似）：
-
-```go
-func Cmd() *cobra.Command {
-	nodeCmd.AddCommand(startCmd()) //peer node start
-	nodeCmd.AddCommand(statusCmd()) //peer node status
-
-	return nodeCmd
-}
-
-var nodeCmd = &cobra.Command{
-	Use:   nodeFuncName,
-	Short: fmt.Sprint(shortDes),
-	Long:  fmt.Sprint(longDes),
-}
-//代码在peer/node/node.go　
-```
-
-以及nodeCmd.AddCommand(startCmd()) peer node start相关命令的加载：
-
-```go
-func startCmd() *cobra.Command {
-	flags := nodeStartCmd.Flags()
-	flags.BoolVarP(&chaincodeDevMode, "peer-chaincodedev", "", false, //chaincodedev
-		"Whether peer in chaincode development mode")
-	flags.BoolVarP(&peerDefaultChain, "peer-defaultchain", "", false, //defaultchain
-		"Whether to start peer with chain testchainid")
-	flags.StringVarP(&orderingEndpoint, "orderer", "o", "orderer:7050", "Ordering service endpoint") //orderer
-
-	return nodeStartCmd
-}
-
-var nodeStartCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Starts the node.",
-	Long:  `Starts a node that interacts with the network.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return serve(args) //peer node start实际代码
-	},
-}
-//代码在peer/node/start.go　
-```
-
-## 3、初始化日志系统（输出对象、日志格式、日志级别）
+## 2.3、初始化日志系统（输出对象、日志格式、日志级别）
 
 如下为初始日志系统代码入口，其中loggingSpec取自环境变量CORE_LOGGING_LEVEL或配置文件中logging.peer，即：全局的默认日志级别。
 
@@ -222,6 +199,69 @@ init()执行结束后，peer/main.go中调用flogging.InitFromSpec(loggingSpec)�
 flogging.InitBackend(flogging.SetFormat(viper.GetString("logging.format")), logOutput)
 //代码在peer/main.go
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+如下为mainCmd.AddCommand(node.Cmd()) peer node相关命令的加载（与上述代码相似）：
+
+```go
+func Cmd() *cobra.Command {
+	nodeCmd.AddCommand(startCmd()) //peer node start
+	nodeCmd.AddCommand(statusCmd()) //peer node status
+
+	return nodeCmd
+}
+
+var nodeCmd = &cobra.Command{
+	Use:   nodeFuncName,
+	Short: fmt.Sprint(shortDes),
+	Long:  fmt.Sprint(longDes),
+}
+//代码在peer/node/node.go　
+```
+
+以及nodeCmd.AddCommand(startCmd()) peer node start相关命令的加载：
+
+```go
+func startCmd() *cobra.Command {
+	flags := nodeStartCmd.Flags()
+	flags.BoolVarP(&chaincodeDevMode, "peer-chaincodedev", "", false, //chaincodedev
+		"Whether peer in chaincode development mode")
+	flags.BoolVarP(&peerDefaultChain, "peer-defaultchain", "", false, //defaultchain
+		"Whether to start peer with chain testchainid")
+	flags.StringVarP(&orderingEndpoint, "orderer", "o", "orderer:7050", "Ordering service endpoint") //orderer
+
+	return nodeStartCmd
+}
+
+var nodeStartCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Starts the node.",
+	Long:  `Starts a node that interacts with the network.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return serve(args) //peer node start实际代码
+	},
+}
+//代码在peer/node/start.go　
+```
+
+
 
 ## 4、初始化 MSP （Membership Service Provider会员服务提供者）
 
