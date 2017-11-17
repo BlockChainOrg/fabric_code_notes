@@ -43,6 +43,21 @@ type PeerLedger interface {
 //代码在core/ledger/ledger_interface.go
 ```
 
+补充PeerLedger接口嵌入的commonledger.Ledger接口定义如下：
+
+```go
+type Ledger interface {
+	GetBlockchainInfo() (*common.BlockchainInfo, error) //获取blockchain基本信息
+	GetBlockByNumber(blockNumber uint64) (*common.Block, error) //按给定高度获取Block，给定math.MaxUint64将获取最新Block
+	GetBlocksIterator(startBlockNumber uint64) (ResultsIterator, error) //获取从startBlockNumber开始的迭代器（包含startBlockNumber），迭代器是阻塞迭代，直到ledger中下一个block可用
+	Close() //关闭ledger
+	Commit(block *common.Block) error //提交新block
+}
+//代码在common/ledger/ledger_interface.go
+```
+
+ValidatedLedger接口暂未定义方法，从PeerLedger筛选出无效交易后，ValidatedLedger表示最终账本。暂时忽略。
+
 
 ## 10、本文使用到的网络内容
 

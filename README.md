@@ -1,5 +1,7 @@
 # Fabric 1.0源码旅程
 
+本文基于Fabric v1.0.4版本代码。
+
 * [Fabric 1.0源码旅程 之 Peer](peer/README.md)
 	* [（1）peer根命令入口及加载子命令](peer/peer_main.md)
 	* [（2）peer node命令实现](peer/peer_node.md)
