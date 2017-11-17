@@ -9,6 +9,7 @@
 * [Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）](bccsp/README.md)
 * [Fabric 1.0源码旅程 之 MSP（成员关系服务提供者）](msp/README.md)
 * [Fabric 1.0源码旅程 之 Ledger（账本）](ledger/README.md)
+	* [（1）idStore（ledgerID数据库）](ledger/idstore.md)
 ------
 * [Fabric 1.0源码旅程 之 附录-ECDSA（椭圆曲线数字签名算法）](ecdsa/README.md)
 * [Fabric 1.0源码旅程 之 附录-简称表](abbreviation/README.md)
