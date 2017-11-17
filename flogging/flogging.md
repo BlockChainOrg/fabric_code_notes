@@ -67,6 +67,7 @@ func InitBackend(formatter logging.Formatter, output io.Writer) {
 	logging.SetBackend(backendFormatter).SetLevel(defaultLevel, "") //设置日志输出对象的日志级别
 }
 //代码在common/flogging/logging.go
+```
 
 func InitFromSpec(spec string) string代码如下。
 其中spec格式为：[<module>[,<module>...]=]<level>[:[<module>[,<module>...]=]<level>...]。
@@ -127,35 +128,20 @@ func (l *moduleLeveled) GetLevel(module string) Level {
 
 flogging包封装的方法，如下：
 
-
-
-
-
-
-
-
-```go
-
-
-//代码在common/flogging/logging.go
-```
-
-
-
-
-
-	* func SetFormat(formatSpec string) logging.Formatter {
-	* func InitBackend(formatter logging.Formatter, output io.Writer) {
-	* func DefaultLevel() string {
-	* func GetModuleLevel(module string) string {
-	* func SetModuleLevel(moduleRegExp string, level string) (string, error) {
-	* func setModuleLevel(moduleRegExp string, level string, isRegExp bool, revert bool) (string, error) {
-	* func MustGetLogger(module string) *logging.Logger {
-	* func InitFromSpec(spec string) string {
-	* func SetPeerStartupModulesMap() {
-	* func GetPeerStartupLevel(module string) string {
-	* func RevertToPeerStartupLevels() error {
-
+* func Reset() {
+* func SetFormat(formatSpec string) logging.Formatter {
+* func InitBackend(formatter logging.Formatter, output io.Writer) {
+* func DefaultLevel() string {
+* func (l *moduleLeveled) GetLevel(module string) Level {
+* func GetModuleLevel(module string) string {
+* func SetModuleLevel(moduleRegExp string, level string) (string, error) {
+* func setModuleLevel(moduleRegExp string, level string, isRegExp bool, revert bool) (string, error) {
+* func MustGetLogger(module string) *logging.Logger {
+* func LogLevel(level string) (Level, error) {
+* func InitFromSpec(spec string) string {
+* func SetPeerStartupModulesMap() {
+* func GetPeerStartupLevel(module string) string {
+* func RevertToPeerStartupLevels() error {
 
 ## 5、本文使用到的网络内容
 
