@@ -22,5 +22,5 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 	
 如下为分节说明Peer代码：
 
-* [Fabric 1.0源码旅程 之 Peer（1）-peer根命令入口及加载子命令](peer_main.md)
-* [Fabric 1.0源码旅程 之 Peer（2）-peer node命令实现](peer_node.md)
+* [Fabric 1.0源码旅程 之 Peer（1）peer根命令入口及加载子命令](peer_main.md)
+* [Fabric 1.0源码旅程 之 Peer（2）peer node命令实现](peer_node.md)
