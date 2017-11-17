@@ -82,7 +82,7 @@ func InitFromSpec(spec string) string代码如下。
 其中spec格式为：[<module>[,<module>...]=]<level>[:[<module>[,<module>...]=]<level>...]。
 此处传入spec为""，将""模块日志级别设置为defaultLevel，并会将modules初始化为defaultLevel。
 
-```
+```go
 levelAll := defaultLevel //defaultLevel为logging.INFO
 var err error
 
