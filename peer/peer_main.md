@@ -155,6 +155,8 @@ if spec != "" { //如果spec不为空，则按既定格式读取
 		}
 	}
 }
+//代码在common/flogging/logging.go
+```
 
 flogging（Fabric日志系统）更详细信息参考：[Fabric 1.0源码旅程 之 flogging（Fabric日志系统）](../flogging/README.md)
 
