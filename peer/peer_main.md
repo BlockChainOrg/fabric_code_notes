@@ -1,8 +1,6 @@
-# Fabric 1.0源码旅程 之 Peer（1）-peer命令入口及加载子命令
+# Fabric 1.0源码旅程 之 Peer（1）-peer根命令入口及加载子命令
 
-## 2、peer命令入口及加载子命令
-
-### 2.1、加载环境变量配置和配置文件
+## 1、加载环境变量配置和配置文件
 
 Fabric支持通过环境变量对部分配置进行更新，如：CORE_LOGGING_LEVEL为输出的日志级别、CORE_PEER_ID为Peer的ID等。
 此部分功能由第三方包viper来实现，viper除支持环境变量的配置方式外，还支持配置文件方式。viper使用方法参考：https://github.com/spf13/viper。
@@ -49,7 +47,7 @@ viper.SetConfigName(configName)
 //代码在core/config/config.go
 ```
 
-### 2.2、加载命令行工具和命令
+## 2、加载命令行工具和命令
 
 Fabric支持类似peer node start、peer channel create、peer chaincode install这种命令、子命令、命令选项的命令行形式。
 此功能由第三方包cobra来实现，以peer chaincode install -n test_cc -v 1.0 -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02为例，
@@ -106,7 +104,7 @@ mainCmd.AddCommand(channel.Cmd(nil))
 
 mainCmd.Execute()为命令启动。
 
-## 2.3、初始化日志系统（输出对象、日志格式、日志级别）
+## 3、初始化日志系统（输出对象、日志格式、日志级别）
 
 如下为初始日志系统代码入口，其中loggingSpec取自环境变量CORE_LOGGING_LEVEL或配置文件中logging.peer，即：全局的默认日志级别。
 
@@ -158,70 +156,7 @@ if spec != "" { //如果spec不为空，则按既定格式读取
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-如下为mainCmd.AddCommand(node.Cmd()) peer node相关命令的加载（与上述代码相似）：
-
-```go
-func Cmd() *cobra.Command {
-	nodeCmd.AddCommand(startCmd()) //peer node start
-	nodeCmd.AddCommand(statusCmd()) //peer node status
-
-	return nodeCmd
-}
-
-var nodeCmd = &cobra.Command{
-	Use:   nodeFuncName,
-	Short: fmt.Sprint(shortDes),
-	Long:  fmt.Sprint(longDes),
-}
-//代码在peer/node/node.go　
-```
-
-以及nodeCmd.AddCommand(startCmd()) peer node start相关命令的加载：
-
-```go
-func startCmd() *cobra.Command {
-	flags := nodeStartCmd.Flags()
-	flags.BoolVarP(&chaincodeDevMode, "peer-chaincodedev", "", false, //chaincodedev
-		"Whether peer in chaincode development mode")
-	flags.BoolVarP(&peerDefaultChain, "peer-defaultchain", "", false, //defaultchain
-		"Whether to start peer with chain testchainid")
-	flags.StringVarP(&orderingEndpoint, "orderer", "o", "orderer:7050", "Ordering service endpoint") //orderer
-
-	return nodeStartCmd
-}
-
-var nodeStartCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Starts the node.",
-	Long:  `Starts a node that interacts with the network.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return serve(args) //peer node start实际代码
-	},
-}
-//代码在peer/node/start.go　
-```
-
-
+flogging（Fabric日志系统）更详细信息参考：[Fabric 1.0源码旅程 之 flogging（Fabric日志系统）](../flogging/README.md)
 
 ## 4、初始化 MSP （Membership Service Provider会员服务提供者）
 
@@ -329,17 +264,13 @@ sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
 return getMspConfig(dir, ID, sigid) //分别读取cacerts、admincerts、tlscacerts文件，以及config.yaml中组织信息，构造msp.FabricMSPConfig，序列化后用于构造msp.MSPConfig
 //代码在msp/configbuilder.go
 ```
-factory.InitFactories(bccspConfig)及bccsp后续实现，参考：[Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）](../bccsp/bccsp.md)
+factory.InitFactories(bccspConfig)及BCCSP（区块链加密服务提供者）更详细内容，参考：[Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）](../bccsp/README.md)
 
-MSP相关深入内容，参考：[Fabric 1.0源码旅程 之 MSP（成员关系服务提供者）](../msp/msp.md)
+MSP（成员关系服务提供者）更详细内容，参考：[Fabric 1.0源码旅程 之 MSP（成员关系服务提供者）](../msp/README.md)
 
 至此，peer/main.go结束，接下来将进入peer/node/start.go中serve(args)函数。
 
-## 5、初始化账本管理
-
-
-
-## 10、本文使用到的网络内容
+## 5、本文使用到的网络内容
 
 * [fabric源码解析2——peer命令结构](http://blog.csdn.net/idsuf698987/article/details/75034998)
 * [fabric源码解析3——日志系统](http://blog.csdn.net/idsuf698987/article/details/75223986)
