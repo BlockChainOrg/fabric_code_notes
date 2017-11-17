@@ -10,6 +10,9 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 * peer
 	* main.go，peer命令入口。
 	* node目录，peer node命令及子命令peer node start和peer node status实现。
+		* node.go，peer node命令入口。
+		* start.go，peer node start子命令实现。
+		* status.go，peer node status子命令实现。
 	* channel目录，peer channel命令及子命令实现。
 	* chaincode目录，peer chaincode命令及子命令实现。
 	* clilogging目录，peer clilogging命令及子命令实现。
