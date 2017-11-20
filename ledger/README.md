@@ -2,10 +2,11 @@
 
 ## 1、Ledger概述
 
-Ledger，即账本数据库。Fabric中有四种账本数据库，idStore（ledgerID数据库）、blkstorage（block数据库）、statedb（状态数据库）、historydb（历史数据库）。
+Ledger，即账本数据库。Fabric账本中有四种数据库，idStore（ledgerID数据库）、blkstorage（block数据库）、statedb（状态数据库）、historydb（历史数据库）。
 其中statedb可选择使用leveldb或couchDB外，其他三种均使用leveldb实现。
 
-idStore更详细内容，参考：[Fabric 1.0源码旅程 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
+* idStore更详细内容，参考：[Fabric 1.0源码旅程 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
+* blkstorage更详细内容，参考：[Fabric 1.0源码旅程 之 Ledger（2）blkstorage（block数据库）](blkstorage.md)
 
 Ledger相关代码分布在common/ledger、core/ledger和protos/ledger目录下。目录结构如下：
 
@@ -127,11 +128,10 @@ type Provider struct {
 //代码在core/ledger/kvledger/kv_ledger_provider.go
 ```
 
-idStore结构体定义：
+* idStore更详细内容，参考：[Fabric 1.0源码旅程 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
+* blkstorage更详细内容，参考：[Fabric 1.0源码旅程 之 Ledger（2）blkstorage（block数据库）](blkstorage.md)
 
-type idStore struct {
-	db *leveldbhelper.DB
-}
+
 
 ## 10、本文使用到的网络内容
 

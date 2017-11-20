@@ -11,6 +11,7 @@
 * [Fabric 1.0源码旅程 之 LevelDB（KV数据库）](leveldb/README.md)
 * [Fabric 1.0源码旅程 之 Ledger（账本）](ledger/README.md)
 	* [（1）idStore（ledgerID数据库）](ledger/idstore.md)
+	* [（2）blkstorage（block数据库）](ledger/blkstorage.md)
 ------
 * [Fabric 1.0源码旅程 之 附录-ECDSA（椭圆曲线数字签名算法）](ecdsa/README.md)
 * [Fabric 1.0源码旅程 之 附录-简称表](abbreviation/README.md)
