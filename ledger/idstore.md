@@ -2,10 +2,10 @@
 
 ## 1、idStore概述
 
-Fabric支持创建多个Ledger，不同Ledger以ledgerID区分。
-多个ledgerID及其创世区块存储在idStore数据库中，idStore数据库基于leveldb实现。
-idStore默认使用路径：/var/hyperledger/production/ledgersData/ledgerProvider/。
-idStore库中特殊key "underConstructionLedgerKey"，用于标志最新在建的ledgerID，ledgerID创建失败时该标志将清除，另外此标志也用于异常时按ledgerID恢复数据。
+* Fabric支持创建多个Ledger，不同Ledger以ledgerID区分。
+* 多个ledgerID及其创世区块存储在idStore数据库中，idStore数据库基于leveldb实现。
+* idStore默认使用路径：/var/hyperledger/production/ledgersData/ledgerProvider/。
+* idStore库中特殊key "underConstructionLedgerKey"，用于标志最新在建的ledgerID，ledgerID创建失败时该标志将清除，另外此标志也用于异常时按ledgerID恢复数据。
 
 ## 2、idStore结构体定义
 
