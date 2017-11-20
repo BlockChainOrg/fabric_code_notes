@@ -32,7 +32,7 @@ Ledger相关代码分布在common/ledger、core/ledger和protos/ledger目录下�
 	* util目录，Ledger工具相关函数实现。
 	
 
-## 2、核心接口定义
+## 3、核心接口定义
 
 PeerLedgerProvider接口定义：提供PeerLedger实例handle。
 
@@ -119,7 +119,7 @@ type TxSimulator interface {
 //代码在core/ledger/ledger_interface.go
 ```
 
-## 3、kvledger.Provider结构体及方法（实现PeerLedgerProvider接口）
+## 4、kvledger.Provider结构体及方法（实现PeerLedgerProvider接口）
 
 Provider结构体定义：
 
