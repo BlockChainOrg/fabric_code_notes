@@ -65,9 +65,95 @@ func (dbInst *DB) WriteBatch(batch *leveldb.Batch, sync bool) error //db.Write�
 //代码在common/ledger/util/leveldbhelper/leveldb_helper.go
 ```
 
-## 
+## 3、DBHandle结构体及方法
 
-## 10、本文使用到的网络内容
+DBHandle结构体定义：封装DB，目的为给key添加dbName前缀，添加和拆除前缀通过constructLevelKey(h.dbName, key)和retrieveAppKey()实现。
+
+```go
+type DBHandle struct {
+	dbName string //DB名称
+	db     *DB //type DB struct
+}
+//代码在common/ledger/util/leveldbhelper/leveldb_provider.go
+```
+
+涉及如下方法：
+
+```go
+func (h *DBHandle) Get(key []byte) ([]byte, error) //h.db.Get
+func (h *DBHandle) Put(key []byte, value []byte, sync bool) error //h.db.Put
+func (h *DBHandle) Delete(key []byte, sync bool) error //h.db.Delete
+func (h *DBHandle) WriteBatch(batch *UpdateBatch, sync bool) error //h.db.WriteBatch
+func (h *DBHandle) GetIterator(startKey []byte, endKey []byte) *Iterator //h.db.GetIterator
+//代码在common/ledger/util/leveldbhelper/leveldb_provider.go
+```
+
+补充UpdateBatch结构体及方法：
+
+```go
+type UpdateBatch struct {
+	KVs map[string][]byte
+}
+func NewUpdateBatch() *UpdateBatch //构造UpdateBatch
+func (batch *UpdateBatch) Put(key []byte, value []byte) //batch.KVs[string(key)] = value
+func (batch *UpdateBatch) Delete(key []byte) //batch.KVs[string(key)] = nil
+//代码在common/ledger/util/leveldbhelper/leveldb_provider.go
+```
+
+补充Iterator结构体及方法：封装github.com/syndtr/goleveldb/leveldb/iterator。
+
+```go
+type Iterator struct {
+	iterator.Iterator
+}
+func (itr *Iterator) Key() []byte //itr.Iterator.Key()拆除dbName
+func constructLevelKey(dbName string, key []byte) []byte //为key添加dbName
+func retrieveAppKey(levelKey []byte) []byte //为key拆除dbName
+//代码在common/ledger/util/leveldbhelper/leveldb_provider.go
+```
+
+## 4、Provider结构体及方法
+
+Provider结构体定义：将单个物理LevelDB，虚拟为多个逻辑LevelDB
+
+```go
+type Provider struct {
+	db        *DB
+	dbHandles map[string]*DBHandle
+	mux       sync.Mutex
+}
+//代码在common/ledger/util/leveldbhelper/leveldb_provider.go
+```
+
+涉及方法如下：
+
+```go
+func NewProvider(conf *Conf) *Provider {//创建并打开db，构造Provider
+	db := CreateDB(conf)
+	db.Open()
+	return &Provider{db, make(map[string]*DBHandle), sync.Mutex{}}
+}
+
+//获取名称为dbName的leveldb句柄
+func (p *Provider) GetDBHandle(dbName string) *DBHandle {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	dbHandle := p.dbHandles[dbName]
+	if dbHandle == nil {
+		dbHandle = &DBHandle{dbName, p.db}
+		p.dbHandles[dbName] = dbHandle
+	}
+	return dbHandle
+}
+
+//关闭leveldb
+func (p *Provider) Close() {
+	p.db.Close()
+}
+//代码在common/ledger/util/leveldbhelper/leveldb_provider.go
+```
+
+## 5、本文使用到的网络内容
 
 * [LevelDB详解](http://blog.csdn.net/linuxheik/article/details/52768223)
 * [Golang 之 key-value LevelDB](http://www.cnblogs.com/qufo/p/5701237.html)
