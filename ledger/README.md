@@ -14,6 +14,7 @@ Ledger相关代码分布在common/ledger、core/ledger和protos/ledger目录下�
 	* blkstorage目录
 		* blockstorage.go，定义了通用接口 BlockStoreProvider和BlockStore。
 		* fsblkstorage目录，实现了BlockStoreProvider和BlockStore接口。
+	* util/leveldbhelper目录，LevelDB数据库操作的封装。
 * core/ledger目录
 	* ledger_interface.go，定义了核心接口PeerLedgerProvider、PeerLedger、ValidatedLedger（暂时未定义）、QueryExecutor、HistoryQueryExecutor和TxSimulator。
 	* kvledger目录，目前PeerLedgerProvider、PeerLedger等接口仅有一种实现即：kvledger。
