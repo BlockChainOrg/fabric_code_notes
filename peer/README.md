@@ -1,4 +1,4 @@
-# Fabric 1.0源码旅程 之 Peer
+# Fabric 1.0源代码笔记 之 Peer
 
 在Fabric中，Peer（节点）是指在网络中负责接收交易请求、维护一致账本的各个fabric-peer实例。节点之间彼此通过gRPC通信。
 按角色划分，Peer包括两种类型：
@@ -22,5 +22,5 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 	
 如下为分节说明Peer代码：
 
-* [Fabric 1.0源码旅程 之 Peer（1）peer根命令入口及加载子命令](peer_main.md)
-* [Fabric 1.0源码旅程 之 Peer（2）peer node命令实现](peer_node.md)
+* [Fabric 1.0源代码笔记 之 Peer（1）peer根命令入口及加载子命令](peer_main.md)
+* [Fabric 1.0源代码笔记 之 Peer（2）peer node命令实现](peer_node.md)

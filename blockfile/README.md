@@ -1,4 +1,4 @@
-# Fabric 1.0源码旅程 之 blockfile（区块文件存储）
+# Fabric 1.0源代码笔记 之 blockfile（区块文件存储）
 
 ## 1、blockfile概述
 

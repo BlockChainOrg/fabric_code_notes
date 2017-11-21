@@ -1,4 +1,4 @@
-# Fabric 1.0源码旅程 之 Ledger（2）blkstorage（block数据库）
+# Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block数据库）
 
 ## blkstorage概述
 
@@ -13,7 +13,7 @@ blkstorage相关代码在common/ledger/blkstorage目录，目录结构如下：
 	* fs_blockstore.go，BlockStore接口实现，即fsBlockStore，主要为封装blockfileMgr。
 	* fs_blockstore_provider.go，BlockStoreProvider接口实现，即FsBlockstoreProvider。
 	
-blockfile更详细内容，参考：[Fabric 1.0源码旅程 之 blockfile（区块文件存储）](../blockfile/README.md)。
+blockfile更详细内容，参考：[Fabric 1.0源代码笔记 之 blockfile（区块文件存储）](../blockfile/README.md)。
 
 ## 1、核心接口定义
 

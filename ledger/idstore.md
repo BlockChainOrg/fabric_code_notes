@@ -1,4 +1,4 @@
-# Fabric 1.0源码旅程 之 Ledger（1）idStore（ledgerID数据库）
+# Fabric 1.0源代码笔记 之 Ledger（1）idStore（ledgerID数据库）
 
 ## 1、idStore概述
 
@@ -10,7 +10,7 @@
 
 ## 2、idStore结构体定义
 
-leveldbhelper更详细内容，参考：[Fabric 1.0源码旅程 之 LevelDB（KV数据库）](../leveldb/README.md)
+leveldbhelper更详细内容，参考：[Fabric 1.0源代码笔记 之 LevelDB（KV数据库）](../leveldb/README.md)
 
 ```go
 type idStore struct {

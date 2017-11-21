@@ -1,4 +1,4 @@
-# Fabric 1.0源码旅程 之 Peer（1）peer根命令入口及加载子命令
+# Fabric 1.0源代码笔记 之 Peer（1）peer根命令入口及加载子命令
 
 ## 1、加载环境变量配置和配置文件
 
@@ -158,7 +158,7 @@ if spec != "" { //如果spec不为空，则按既定格式读取
 //代码在common/flogging/logging.go
 ```
 
-flogging（Fabric日志系统）更详细信息参考：[Fabric 1.0源码旅程 之 flogging（Fabric日志系统）](../flogging/README.md)
+flogging（Fabric日志系统）更详细信息参考：[Fabric 1.0源代码笔记 之 flogging（Fabric日志系统）](../flogging/README.md)
 
 ## 4、初始化 MSP （Membership Service Provider会员服务提供者）
 
@@ -266,9 +266,9 @@ sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
 return getMspConfig(dir, ID, sigid) //分别读取cacerts、admincerts、tlscacerts文件，以及config.yaml中组织信息，构造msp.FabricMSPConfig，序列化后用于构造msp.MSPConfig
 //代码在msp/configbuilder.go
 ```
-factory.InitFactories(bccspConfig)及BCCSP（区块链加密服务提供者）更详细内容，参考：[Fabric 1.0源码旅程 之 BCCSP（区块链加密服务提供者）](../bccsp/README.md)
+factory.InitFactories(bccspConfig)及BCCSP（区块链加密服务提供者）更详细内容，参考：[Fabric 1.0源代码笔记 之 BCCSP（区块链加密服务提供者）](../bccsp/README.md)
 
-MSP（成员关系服务提供者）更详细内容，参考：[Fabric 1.0源码旅程 之 MSP（成员关系服务提供者）](../msp/README.md)
+MSP（成员关系服务提供者）更详细内容，参考：[Fabric 1.0源代码笔记 之 MSP（成员关系服务提供者）](../msp/README.md)
 
 至此，peer/main.go结束，接下来将进入peer/node/start.go中serve(args)函数。
 

@@ -1,4 +1,4 @@
-# Fabric 1.0源码旅程 之 flogging（Fabric日志系统）
+# Fabric 1.0源代码笔记 之 flogging（Fabric日志系统）
 
 ## 1、flogging概述
 
