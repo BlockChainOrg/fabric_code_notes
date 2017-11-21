@@ -12,7 +12,7 @@
 * [Fabric 1.0源代码笔记 之 blockfile（区块文件存储）](blockfile/README.md)
 * [Fabric 1.0源代码笔记 之 Ledger（账本）](ledger/README.md)
 	* [（1）idStore（ledgerID数据库）](ledger/idstore.md)
-	* [（2）blkstorage（block数据库）](ledger/blkstorage.md)
+	* [（2）blkstorage（block文件存储）](ledger/blkstorage.md)
 ------
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](ecdsa/README.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](abbreviation/README.md)
