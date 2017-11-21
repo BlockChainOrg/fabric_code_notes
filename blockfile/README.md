@@ -9,8 +9,97 @@ blockfile，即Fabric区块链区块文件存储，默认目录/var/hyperledger/
 blockfile，相关代码集中在common/ledger/blkstorage/fsblkstorage目录，目录结构如下：
 
 * blockfile_mgr.go，blockfileMgr和checkpointInfo结构体及方法。
+* block_stream.go，blockfileStream、blockStream、blockPlacementInfo结构体及方法。
+* blockfile_rw.go，blockfileWriter和blockfileReader结构体及方法（blockfileReader未使用）。
+* blockindex.go，index接口定义，index接口实现即blockIndex结构体及方法定义，以及blockIdxInfo、locPointer、fileLocPointer结构体及方法。
+* blockfile_helper.go，定义了4个工具函数，constructCheckpointInfoFromBlockFiles、retrieveLastFileSuffix、isBlockFileName、getFileInfoOrPanic。
+作用分别为：扫描最新的blockfile并重新构造检查点信息、获取最新的文件后缀、根据文件前缀判断是否为区块文件、获取文件状态信息。
+* block_serialization.go，block序列化相关工具函数。
 
-## 2、checkpointInfo结构体定义及方法
+## 2、Block结构体定义和方法、以及Block序列化
+
+### 2.1、Block相关结构体及方法
+
+Block结构体定义及方法：
+
+```go
+type Block struct {
+	Header   *BlockHeader //BlockHeader
+	Data     *BlockData //BlockData
+	Metadata *BlockMetadata
+}
+
+func (m *Block) GetHeader() *BlockHeader //获取BlockHeader，即m.Header
+func (m *Block) GetData() *BlockData //获取BlockData，即m.Data
+//代码在protos/common/common.pb.go
+```
+
+BlockHeader结构体定义及方法：
+
+```go
+type BlockHeader struct {
+	Number       uint64 //区块编号
+	PreviousHash []byte //前一个区块哈希
+	DataHash     []byte //当前区块哈希
+}
+
+func (m *BlockHeader) GetNumber() uint64 //获取区块编号，即m.Number
+func (m *BlockHeader) GetPreviousHash() []byte //获取前一个区块哈希，即m.PreviousHash
+func (m *BlockHeader) GetDataHash() []byte //获取当前区块哈希，即m.DataHash
+//代码在protos/common/common.pb.go
+```
+
+BlockData结构体定义及方法：
+
+```go
+type BlockData struct {
+	Data [][]byte //Data，存储交易信息
+}
+
+func (m *BlockData) GetData() [][]byte //获取Data，即m.Data
+//代码在protos/common/common.pb.go
+```
+
+### 2.2、Block序列化
+
+serializedBlockInfo结构体定义及工具函数：
+
+```go
+type serializedBlockInfo struct {
+	blockHeader *common.BlockHeader //BlockHeader
+	txOffsets   []*txindexInfo //交易索引信息
+	metadata    *common.BlockMetadata
+}
+
+type txindexInfo struct {
+	txID string //交易ID
+	loc  *locPointer //文件指针
+}
+
+//序列化区块，返回序列化后字节，以及serializedBlockInfo（含BlockHeader和交易索引信息）
+func serializeBlock(block *common.Block) ([]byte, *serializedBlockInfo, error)
+//反序列化区块，构建Block结构体
+func deserializeBlock(serializedBlockBytes []byte) (*common.Block, error)
+//反序列化区块，并构造serializedBlockInfo
+func extractSerializedBlockInfo(serializedBlockBytes []byte) (*serializedBlockInfo, error)
+//序列化中添加BlockHeader，即Number、DataHash和PreviousHash
+func addHeaderBytes(blockHeader *common.BlockHeader, buf *proto.Buffer) error
+//序列化中添加BlockData，并从BlockData中解析txid，返回交易索引信息数组
+func addDataBytes(blockData *common.BlockData, buf *proto.Buffer) ([]*txindexInfo, error)
+//序列化中添加Metadata
+func addMetadataBytes(blockMetadata *common.BlockMetadata, buf *proto.Buffer) error
+//反序列化出BlockHeader
+func extractHeader(buf *ledgerutil.Buffer) (*common.BlockHeader, error)
+//反序列化出BlockData，并返回交易索引信息数组
+func extractData(buf *ledgerutil.Buffer) (*common.BlockData, []*txindexInfo, error)
+//反序列化出Metadata
+func extractMetadata(buf *ledgerutil.Buffer) (*common.BlockMetadata, error)
+//从BlockData中解析出交易ID
+func extractTxID(txEnvelopBytes []byte) (string, error)
+//代码在common/ledger/blkstorage/fsblkstorage/block_serialization.go
+```
+
+## 3、checkpointInfo结构体定义及方法
 
 checkpointInfo，即检查点信息，结构体定义如下：
 
@@ -33,9 +122,9 @@ func (i *checkpointInfo) String() string //转换为string
 //代码在common/ledger/blkstorage/fsblkstorage/blockfile_mgr.go
 ```
 
-## 3、blockfileStream相关结构体及方法
+## 4、blockfileStream相关结构体及方法
 
-### 3.1、blockfileStream
+### 4.1、blockfileStream
 
 blockfileStream定义如下：
 
@@ -54,7 +143,7 @@ type blockfileStream struct {
 ```go
 //构造blockfileStream
 func newBlockfileStream(rootDir string, fileNum int, startOffset int64) (*blockfileStream, error) 
-func (s *blockfileStream) nextBlockBytes() ([]byte, error) //下一个块
+func (s *blockfileStream) nextBlockBytes() ([]byte, error) //下一个块，调取s.nextBlockBytesAndPlacementInfo()
 //下一个块和位置信息
 func (s *blockfileStream) nextBlockBytesAndPlacementInfo() ([]byte, *blockPlacementInfo, error) 
 func (s *blockfileStream) close() error //关闭blockfileStream
@@ -102,7 +191,7 @@ type blockPlacementInfo struct {
 //代码在common/ledger/blkstorage/fsblkstorage/block_stream.go
 ```
 
-## 4、blockfileWriter结构体定义及方法
+## 5、blockfileWriter结构体定义及方法
 
 ```go
 type blockfileWriter struct {
@@ -118,9 +207,9 @@ func (w *blockfileWriter) close() error //关闭文件
 //代码在common/ledger/blkstorage/fsblkstorage/blockfile_rw.go
 ```
 
-## 5、blockIndex相关结构体及方法
+## 6、blockIndex相关结构体及方法
 
-### 5.1、index接口定义
+### 6.1、index接口定义
 
 ```go
 type index interface {
@@ -136,7 +225,7 @@ type index interface {
 //代码在common/ledger/blkstorage/fsblkstorage/blockindex.go
 ```
 
-### 5.2、blockIndex结构体
+### 6.2、blockIndex结构体
 
 blockIndex结构体定义如下：
 
@@ -271,11 +360,10 @@ if _, ok := index.indexItemsMap[blkstorage.IndexableAttrTxValidationCode]; ok { 
 batch.Put(indexCheckpointKey, encodeBlockNum(blockIdxInfo.blockNum)) //key为"indexCheckpointKey"的值，即为最新的区块编号
 err := index.db.WriteBatch(batch, true) //批量更新
 }
-
 //代码在common/ledger/blkstorage/fsblkstorage/blockindex.go
 ```
 
-## 6、blockfileMgr结构体定义及方法
+## 7、blockfileMgr结构体定义及方法
 
 blockfileMgr结构体定义：
 
@@ -300,28 +388,30 @@ type blockfileMgr struct {
 func newBlockfileMgr(id string, conf *Conf, indexConfig *blkstorage.IndexConfig, indexStore *leveldbhelper.DBHandle) *blockfileMgr
 func syncCPInfoFromFS(rootDir string, cpInfo *checkpointInfo) //从文件系统中更新检查点信息
 func deriveBlockfilePath(rootDir string, suffixNum int) string //构造Blockfile路径
-func (mgr *blockfileMgr) close() {
-func (mgr *blockfileMgr) moveToNextFile() {
+func (mgr *blockfileMgr) close() //关闭blockfileWriter
+func (mgr *blockfileMgr) moveToNextFile() //转至下个新区块文件，打开新文件、并更新检查点信息
 func (mgr *blockfileMgr) addBlock(block *common.Block) error {
-func (mgr *blockfileMgr) syncIndex() error {
-func (mgr *blockfileMgr) getBlockchainInfo() *common.BlockchainInfo {
-func (mgr *blockfileMgr) updateCheckpoint(cpInfo *checkpointInfo) {
-func (mgr *blockfileMgr) updateBlockchainInfo(latestBlockHash []byte, latestBlock *common.Block) {
+func (mgr *blockfileMgr) syncIndex() error //同步区块索引
+func (mgr *blockfileMgr) getBlockchainInfo() *common.BlockchainInfo //获取BlockchainInfo
+func (mgr *blockfileMgr) updateCheckpoint(cpInfo *checkpointInfo) //更新检查点信息
+func (mgr *blockfileMgr) updateBlockchainInfo(latestBlockHash []byte, latestBlock *common.Block) //更新BlockchainInfo
 func (mgr *blockfileMgr) retrieveBlockByHash(blockHash []byte) (*common.Block, error) {
 func (mgr *blockfileMgr) retrieveBlockByNumber(blockNum uint64) (*common.Block, error) {
 func (mgr *blockfileMgr) retrieveBlockByTxID(txID string) (*common.Block, error) {
 func (mgr *blockfileMgr) retrieveTxValidationCodeByTxID(txID string) (peer.TxValidationCode, error) {
-func (mgr *blockfileMgr) retrieveBlockHeaderByNumber(blockNum uint64) (*common.BlockHeader, error) {
+//按区块编号获取BlockHeader：按区块编号从索引中取文件区块指针，按文件指针取区块Bytes，按区块Bytes构建serializedBlockInfo，取serializedBlockInfo.blockHeader
+func (mgr *blockfileMgr) retrieveBlockHeaderByNumber(blockNum uint64) (*common.BlockHeader, error)
 func (mgr *blockfileMgr) retrieveBlocks(startNum uint64) (*blocksItr, error) {
 func (mgr *blockfileMgr) retrieveTransactionByID(txID string) (*common.Envelope, error) {
 func (mgr *blockfileMgr) retrieveTransactionByBlockNumTranNum(blockNum uint64, tranNum uint64) (*common.Envelope, error) {
 func (mgr *blockfileMgr) fetchBlock(lp *fileLocPointer) (*common.Block, error) //获取下一个块
 func (mgr *blockfileMgr) fetchTransactionEnvelope(lp *fileLocPointer) (*common.Envelope, error) {
-func (mgr *blockfileMgr) fetchBlockBytes(lp *fileLocPointer) ([]byte, error) {
+//按文件指针获取区块Bytes
+func (mgr *blockfileMgr) fetchBlockBytes(lp *fileLocPointer) ([]byte, error)
 func (mgr *blockfileMgr) fetchRawBytes(lp *fileLocPointer) ([]byte, error) {
 func (mgr *blockfileMgr) loadCurrentInfo() (*checkpointInfo, error) //获取存储在index库中最新检查点信息，key为"blkMgrInfo"
 func (mgr *blockfileMgr) saveCurrentInfo(i *checkpointInfo, sync bool) error //将最新检查点信息，序列化后存入index库
-//扫描给定的块文件并检测文件中的最后一个偏移量
+//扫描给定的块文件并检测文件中的最后完整块，返回最后一个块字节、文件最新偏移量、块数
 func scanForLastCompleteBlock(rootDir string, fileNum int, startingOffset int64) ([]byte, int64, int, error) {
 //代码在common/ledger/blkstorage/fsblkstorage/blockfile_mgr.go
 ```
@@ -353,7 +443,7 @@ bcInfo := &common.BlockchainInfo{
 	PreviousBlockHash: nil}
 if !cpInfo.isChainEmpty { //如果不是空链
 	lastBlockHeader, err := mgr.retrieveBlockHeaderByNumber(cpInfo.lastBlockNumber) //获取最后一个块的Header
-	lastBlockHash := lastBlockHeader.Hash() //最后一个块Header的哈希
+	lastBlockHash := lastBlockHeader.Hash() //最后一个块的哈希
 	previousBlockHash := lastBlockHeader.PreviousHash //前一个块的哈希
 	bcInfo = &common.BlockchainInfo{ //构造区块链信息
 		Height:            cpInfo.lastBlockNumber + 1,
@@ -379,5 +469,81 @@ if cpInfo.isChainEmpty { //空链
 	cpInfo.lastBlockNumber += uint64(numBlocks)
 }
 cpInfo.isChainEmpty = false //不再是空链
+//代码在common/ledger/blkstorage/fsblkstorage/blockfile_mgr.go
+```
+
+func (mgr *blockfileMgr) addBlock(block *common.Block) error代码如下：
+
+```go
+	if block.Header.Number != mgr.getBlockchainInfo().Height {
+		return fmt.Errorf("Block number should have been %d but was %d", mgr.getBlockchainInfo().Height, block.Header.Number)
+	}
+	blockBytes, info, err := serializeBlock(block)
+	if err != nil {
+		return fmt.Errorf("Error while serializing block: %s", err)
+	}
+	blockHash := block.Header.Hash()
+	//Get the location / offset where each transaction starts in the block and where the block ends
+	txOffsets := info.txOffsets
+	currentOffset := mgr.cpInfo.latestFileChunksize
+	if err != nil {
+		return fmt.Errorf("Error while serializing block: %s", err)
+	}
+	blockBytesLen := len(blockBytes)
+	blockBytesEncodedLen := proto.EncodeVarint(uint64(blockBytesLen))
+	totalBytesToAppend := blockBytesLen + len(blockBytesEncodedLen)
+
+	//Determine if we need to start a new file since the size of this block
+	//exceeds the amount of space left in the current file
+	if currentOffset+totalBytesToAppend > mgr.conf.maxBlockfileSize {
+		mgr.moveToNextFile()
+		currentOffset = 0
+	}
+	//append blockBytesEncodedLen to the file
+	err = mgr.currentFileWriter.append(blockBytesEncodedLen, false)
+	if err == nil {
+		//append the actual block bytes to the file
+		err = mgr.currentFileWriter.append(blockBytes, true)
+	}
+	if err != nil {
+		truncateErr := mgr.currentFileWriter.truncateFile(mgr.cpInfo.latestFileChunksize)
+		if truncateErr != nil {
+			panic(fmt.Sprintf("Could not truncate current file to known size after an error during block append: %s", err))
+		}
+		return fmt.Errorf("Error while appending block to file: %s", err)
+	}
+
+	//Update the checkpoint info with the results of adding the new block
+	currentCPInfo := mgr.cpInfo
+	newCPInfo := &checkpointInfo{
+		latestFileChunkSuffixNum: currentCPInfo.latestFileChunkSuffixNum,
+		latestFileChunksize:      currentCPInfo.latestFileChunksize + totalBytesToAppend,
+		isChainEmpty:             false,
+		lastBlockNumber:          block.Header.Number}
+	//save the checkpoint information in the database
+	if err = mgr.saveCurrentInfo(newCPInfo, false); err != nil {
+		truncateErr := mgr.currentFileWriter.truncateFile(currentCPInfo.latestFileChunksize)
+		if truncateErr != nil {
+			panic(fmt.Sprintf("Error in truncating current file to known size after an error in saving checkpoint info: %s", err))
+		}
+		return fmt.Errorf("Error while saving current file info to db: %s", err)
+	}
+
+	//Index block file location pointer updated with file suffex and offset for the new block
+	blockFLP := &fileLocPointer{fileSuffixNum: newCPInfo.latestFileChunkSuffixNum}
+	blockFLP.offset = currentOffset
+	// shift the txoffset because we prepend length of bytes before block bytes
+	for _, txOffset := range txOffsets {
+		txOffset.loc.offset += len(blockBytesEncodedLen)
+	}
+	//save the index in the database
+	mgr.index.indexBlock(&blockIdxInfo{
+		blockNum: block.Header.Number, blockHash: blockHash,
+		flp: blockFLP, txOffsets: txOffsets, metadata: block.Metadata})
+
+	//update the checkpoint info (for storage) and the blockchain info (for APIs) in the manager
+	mgr.updateCheckpoint(newCPInfo)
+	mgr.updateBlockchainInfo(blockHash, block)
+	return nil
 //代码在common/ledger/blkstorage/fsblkstorage/blockfile_mgr.go
 ```
