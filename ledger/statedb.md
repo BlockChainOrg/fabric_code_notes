@@ -78,4 +78,37 @@ type VersionedKV struct {
 	CompositeKey //嵌入CompositeKey
 	VersionedValue //嵌入VersionedValue
 }
+//代码在core/ledger/kvledger/txmgmt/statedb/statedb.go
+```
+
+nsUpdates结构体及方法：
+
+```go
+type nsUpdates struct {
+	m map[string]*VersionedValue //string为Key
+}
+
+func newNsUpdates() *nsUpdates//构造nsUpdates
+//代码在core/ledger/kvledger/txmgmt/statedb/statedb.go
+```
+
+UpdateBatch结构体及方法：
+
+```go
+type UpdateBatch struct {
+	updates map[string]*nsUpdates //string为Namespace
+}
+
+//构造UpdateBatch
+func NewUpdateBatch() *UpdateBatch
+//
+func (batch *UpdateBatch) Get(ns string, key string) *VersionedValue
+func (batch *UpdateBatch) Put(ns string, key string, value []byte, version *version.Height)
+func (batch *UpdateBatch) Delete(ns string, key string, version *version.Height)
+func (batch *UpdateBatch) Exists(ns string, key string) bool
+func (batch *UpdateBatch) GetUpdatedNamespaces() []string
+func (batch *UpdateBatch) GetUpdates(ns string) map[string]*VersionedValue
+func (batch *UpdateBatch) GetRangeScanIterator(ns string, startKey string, endKey string) ResultsIterator
+func (batch *UpdateBatch) getOrCreateNsUpdates(ns string) *nsUpdates
+//代码在core/ledger/kvledger/txmgmt/statedb/statedb.go
 ```
