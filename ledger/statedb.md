@@ -155,5 +155,86 @@ type versionedDB struct {
 涉及方法如下：
 
 ```go
+//构造versionedDB
+func newVersionedDB(db *leveldbhelper.DBHandle, dbName string) *versionedDB
+func (vdb *versionedDB) Open() error // do nothing
+func (vdb *versionedDB) Close() // do nothing
+func (vdb *versionedDB) ValidateKey(key string) error // do nothing
+//按namespace和key获取Value
+func (vdb *versionedDB) GetState(namespace string, key string) (*statedb.VersionedValue, error)
+//在单个调用中获取多个键的值
+func (vdb *versionedDB) GetStateMultipleKeys(namespace string, keys []string) ([]*statedb.VersionedValue, error)
+//返回一个迭代器, 其中包含给定键范围之间的所有键值（包括startKey，不包括endKey）
+func (vdb *versionedDB) GetStateRangeScanIterator(namespace string, startKey string, endKey string) (statedb.ResultsIterator, error)
+//leveldb不支持ExecuteQuery方法
+func (vdb *versionedDB) ExecuteQuery(namespace, query string) (statedb.ResultsIterator, error)
+//批处理应用
+func (vdb *versionedDB) ApplyUpdates(batch *statedb.UpdateBatch, height *version.Height) error
+//返回statedb一致的最高事务的高度
+func (vdb *versionedDB) GetLatestSavePoint() (*version.Height, error)
+//拼接ns和key，ns []byte{0x00} key
+func constructCompositeKey(ns string, key string) []byte
+//分割ns和key，分割符[]byte{0x00}
+func splitCompositeKey(compositeKey []byte) (string, string)
 //代码在core/ledger/kvledger/txmgmt/statedb/stateleveldb/stateleveldb.go
 ```
+
+func (vdb *versionedDB) ApplyUpdates(batch *statedb.UpdateBatch, height *version.Height) error代码如下：
+
+```go
+dbBatch := leveldbhelper.NewUpdateBatch()
+namespaces := batch.GetUpdatedNamespaces() //获取更新的namespace列表
+for _, ns := range namespaces {
+	updates := batch.GetUpdates(ns) //按namespace获取nsUpdates
+	for k, vv := range updates {
+		compositeKey := constructCompositeKey(ns, k) //拼接ns和key
+		if vv.Value == nil {
+			dbBatch.Delete(compositeKey)
+		} else {
+			dbBatch.Put(compositeKey, statedb.EncodeValue(vv.Value, vv.Version))
+		}
+	}
+}
+//statedb一致的最高事务的高度
+dbBatch.Put(savePointKey, height.ToBytes()) //var savePointKey = []byte{0x00}
+err := vdb.db.WriteBatch(dbBatch, true)
+//代码在core/ledger/kvledger/txmgmt/statedb/stateleveldb/stateleveldb.go
+```
+
+### 3.2、ResultsIterator接口实现
+
+ResultsIterator接口实现，即kvScanner结构体及方法。
+
+```go
+type kvScanner struct {
+	namespace string
+	dbItr     iterator.Iterator
+}
+
+//构造kvScanner
+func newKVScanner(namespace string, dbItr iterator.Iterator) *kvScanner
+//迭代获取statedb.VersionedKV
+func (scanner *kvScanner) Next() (statedb.QueryResult, error)
+func (scanner *kvScanner) Close() //释放迭代器
+//代码在core/ledger/kvledger/txmgmt/statedb/stateleveldb/stateleveldb.go
+```
+
+### 3.3、VersionedDBProvider接口实现
+
+VersionedDBProvider接口实现，即VersionedDBProvider结构体及方法。
+
+```go
+type VersionedDBProvider struct {
+	dbProvider *leveldbhelper.Provider
+}
+
+func NewVersionedDBProvider() *VersionedDBProvider //构造VersionedDBProvider
+//获取statedb.VersionedDB
+func (provider *VersionedDBProvider) GetDBHandle(dbName string) (statedb.VersionedDB, error)
+func (provider *VersionedDBProvider) Close() //关闭statedb.VersionedDB
+//代码在core/ledger/kvledger/txmgmt/statedb/stateleveldb/stateleveldb.go
+```
+
+## 4、statedb基于cauchdb实现
+
+暂略，待补充。
