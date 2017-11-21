@@ -7,8 +7,8 @@ Ledger，即账本数据库。Fabric账本中有四种数据库，idStore（ledg
 
 * idStore，默认目录/var/hyperledger/production/ledgersData/ledgerProvider，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
 * blkstorage，默认目录/var/hyperledger/production/ledgersData/chains，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block文件存储）](blkstorage.md)
-* statedb，默认目录/var/hyperledger/production/ledgersData/stateLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（3）statedb（状态数据库）](statedb.md)。
-* historydb，默认目录/var/hyperledger/production/ledgersData/historyLeveldb。
+* statedb，默认目录/var/hyperledger/production/ledgersData/stateLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（3）statedb（状态数据库）](statedb.md)
+* historydb，默认目录/var/hyperledger/production/ledgersData/historyLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（4）historydb（历史数据库）](historydb.md)
 
 ## 2、Ledger代码目录结构
 
@@ -16,9 +16,7 @@ Ledger相关代码分布在common/ledger、core/ledger和protos/ledger目录下�
 
 * common/ledger目录
 	* ledger_interface.go，定义了通用接口Ledger、ResultsIterator、以及QueryResult和PrunePolicy（暂时均为空接口）。
-	* blkstorage目录
-		* blockstorage.go，定义了通用接口 BlockStoreProvider和BlockStore。
-		* fsblkstorage目录，实现了BlockStoreProvider和BlockStore接口。
+	* blkstorage目录，blkstorage相关接口及实现。
 	* util/leveldbhelper目录，LevelDB数据库操作的封装。
 	
 * core/ledger目录
@@ -27,6 +25,7 @@ Ledger相关代码分布在common/ledger、core/ledger和protos/ledger目录下�
 		* kv_ledger_provider.go，实现PeerLedgerProvider接口，即Provider结构体及其方法，以及idStore结构体及方法。
 		* kv_ledger.go，实现PeerLedger接口，即kvLedger结构体及方法。
 		* txmgmt目录，交易管理。
+			* statedb目录，statedb相关接口及实现。
 	* ledgermgmt/ledger_mgmt.go，Ledger管理相关函数实现。
 	* ledgerconfig/ledger_config.go，Ledger配置相关函数实现。
 	* util目录，Ledger工具相关函数实现。
@@ -135,6 +134,8 @@ type Provider struct {
 
 * idStore更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
 * blkstorage更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block文件存储）](blkstorage.md)
+* statedb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（3）statedb（状态数据库）](statedb.md)
+* historydb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（4）historydb（历史数据库）](historydb.md)
 
 
 
