@@ -303,10 +303,3 @@ conf, err := msp.GetLocalMspConfig(dir, bccspConfig, mspID) //获取本地MSP配
 return GetLocalMSP().Setup(conf) //调取msp.NewBccspMsp()创建bccspmsp实例，调取bccspmsp.Setup(conf)解码conf.Config并设置bccspmsp
 //代码在msp/mgmt/mgmt.go
 ```
-
-## 8、本文使用到的网络内容
-
-* [成员服务提供者（MSP）](https://hyperledgercn.github.io/hyperledgerDocs/msp_zh/)
-* [MSP&ACL](https://hyperledgercn.github.io/hyperledgerDocs/msp_acl_zh/)
-* [fabric源码解析12——peer的MSP服务](http://blog.csdn.net/idsuf698987/article/details/77103011)
-* [fabric源码解析9——文档翻译之MSP](http://blog.csdn.net/idsuf698987/article/details/76474094)

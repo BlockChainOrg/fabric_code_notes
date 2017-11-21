@@ -780,17 +780,3 @@ csp, err := f.Get(config) //调取f.Get生成BCCSP实例
 bccspMap[f.Name()] = csp //新生成的实例，加入bccspMap中
 //代码在bccsp/factory/factory.go
 ```
-
-## 6、本文使用到的网络内容
-
-* [fabric源码解析13——peer的BCCSP服务](http://blog.csdn.net/idsuf698987/article/details/77200287)
-* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （三）BCCSP包之工厂包](http://blog.csdn.net/lsttoy/article/details/73278445)
-* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （四）BSSCP包之pkcs11加密包](http://blog.csdn.net/lsttoy/article/details/73292182)
-* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （五）BSSCP包之SW加密包](http://blog.csdn.net/lsttoy/article/details/73322148)
-* [[区块链]Hyperledger Fabric源代码（基于v1.0 beta版本）阅读之乐扣老师解读系列 （六）BSSCP包之UTILS工具包](http://blog.csdn.net/lsttoy/article/details/73459950)
-* [Hyperledger Fabric密码模块系列之BCCSP（一）](http://www.cnblogs.com/informatics/p/7522445.html)
-* [Hyperledger Fabric密码模块系列之BCCSP（二）](http://www.cnblogs.com/informatics/p/7572969.html)
-* [Hyperledger Fabric密码模块系列之BCCSP（三）](http://www.cnblogs.com/informatics/p/7604461.html)
-* [Hyperledger Fabric密码模块系列之BCCSP（四）](http://www.cnblogs.com/informatics/p/7604470.html)
-* [Hyperledger Fabric密码模块系列之BCCSP（五） - 国密算法实现](http://www.cnblogs.com/informatics/p/7648039.html)
-* [【翻译】BCCSP密码算法套件解析](http://www.blockchainbrother.com/article/31)

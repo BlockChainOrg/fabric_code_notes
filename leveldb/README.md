@@ -153,9 +153,3 @@ func (p *Provider) Close() {
 //代码在common/ledger/util/leveldbhelper/leveldb_provider.go
 ```
 
-## 5、本文使用到的网络内容
-
-* [LevelDB详解](http://blog.csdn.net/linuxheik/article/details/52768223)
-* [Golang 之 key-value LevelDB](http://www.cnblogs.com/qufo/p/5701237.html)
-* [fabric源码解析5——kvledger初始化](http://blog.csdn.net/idsuf698987/article/details/75388868)
-

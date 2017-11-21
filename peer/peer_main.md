@@ -271,9 +271,3 @@ factory.InitFactories(bccspConfig)及BCCSP（区块链加密服务提供者）�
 MSP（成员关系服务提供者）更详细内容，参考：[Fabric 1.0源代码笔记 之 MSP（成员关系服务提供者）](../msp/README.md)
 
 至此，peer/main.go结束，接下来将进入peer/node/start.go中serve(args)函数。
-
-## 5、本文使用到的网络内容
-
-* [fabric源码解析2——peer命令结构](http://blog.csdn.net/idsuf698987/article/details/75034998)
-* [fabric源码解析3——日志系统](http://blog.csdn.net/idsuf698987/article/details/75223986)
-* [fabric源码解析4——配置系统](http://blog.csdn.net/idsuf698987/article/details/75224228)

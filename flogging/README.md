@@ -195,8 +195,3 @@ func (g *grpclogger) Println(args ...interface{}) {
 //代码在common/flogging/grpclogger.go
 ```
 
-## 5、本文使用到的网络内容
-
-* [go-logging的使用](https://studygolang.com/articles/10845)
-* [fabric源码解析3——日志系统](http://blog.csdn.net/idsuf698987/article/details/75223986)
-
