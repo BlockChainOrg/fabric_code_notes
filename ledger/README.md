@@ -16,16 +16,17 @@ Ledger相关代码分布在common/ledger、core/ledger和protos/ledger目录下�
 
 * common/ledger目录
 	* ledger_interface.go，定义了通用接口Ledger、ResultsIterator、以及QueryResult和PrunePolicy（暂时均为空接口）。
-	* blkstorage目录，blkstorage相关接口及实现。
+	* blkstorage目录，**blkstorage相关接口及实现**。
 	* util/leveldbhelper目录，LevelDB数据库操作的封装。
 	
 * core/ledger目录
 	* ledger_interface.go，定义了核心接口PeerLedgerProvider、PeerLedger、ValidatedLedger（暂时未定义）、QueryExecutor、HistoryQueryExecutor和TxSimulator。
 	* kvledger目录，目前PeerLedgerProvider、PeerLedger等接口仅有一种实现即：kvledger。
-		* kv_ledger_provider.go，实现PeerLedgerProvider接口，即Provider结构体及其方法，以及idStore结构体及方法。
+		* kv_ledger_provider.go，实现PeerLedgerProvider接口，即Provider结构体及其方法，以及**idStore结构体及方法**。
 		* kv_ledger.go，实现PeerLedger接口，即kvLedger结构体及方法。
 		* txmgmt目录，交易管理。
-			* statedb目录，statedb相关接口及实现。
+			* statedb目录，**statedb相关接口及实现**。
+		* history/historydb目录，**historydb相关接口及实现**。
 	* ledgermgmt/ledger_mgmt.go，Ledger管理相关函数实现。
 	* ledgerconfig/ledger_config.go，Ledger配置相关函数实现。
 	* util目录，Ledger工具相关函数实现。
