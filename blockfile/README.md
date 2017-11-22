@@ -17,11 +17,11 @@ blockfile，相关代码集中在common/ledger/blkstorage/fsblkstorage目录，�
 * block_serialization.go，block序列化相关工具函数。
 * blocks_itr.go，blocksItr结构体及方法。
 
-## 2、Block结构体定义和方法、以及Block序列化
+## 2、Block结构体定、以及Block序列化
 
-### 2.1、Block相关结构体及方法
+### 2.1、Block相关结构体
 
-Block结构体定义及方法：
+Block结构体：
 
 ```go
 type Block struct {
@@ -32,10 +32,11 @@ type Block struct {
 
 func (m *Block) GetHeader() *BlockHeader //获取BlockHeader，即m.Header
 func (m *Block) GetData() *BlockData //获取BlockData，即m.Data
+func (m *Block) GetMetadata() *BlockMetadata //m.Metadata
 //代码在protos/common/common.pb.go
 ```
 
-BlockHeader结构体定义及方法：
+BlockHeader结构体：
 
 ```go
 type BlockHeader struct {
@@ -50,7 +51,7 @@ func (m *BlockHeader) GetDataHash() []byte //获取当前区块哈希，即m.Dat
 //代码在protos/common/common.pb.go
 ```
 
-BlockData结构体定义及方法：
+BlockData结构体：
 
 ```go
 type BlockData struct {
@@ -59,6 +60,30 @@ type BlockData struct {
 
 func (m *BlockData) GetData() [][]byte //获取Data，即m.Data
 //代码在protos/common/common.pb.go
+```
+
+BlockMetadata结构体：
+
+```go
+type BlockMetadata struct {
+	Metadata [][]byte //K/V均为[]byte格式
+}
+
+func (m *BlockMetadata) GetMetadata() [][]byte //m.Metadata
+//代码在protos/common/common.pb.go
+```
+
+补充BlockMetadataIndex：
+
+```go
+type BlockMetadataIndex int32
+
+const (
+	BlockMetadataIndex_SIGNATURES          BlockMetadataIndex = 0
+	BlockMetadataIndex_LAST_CONFIG         BlockMetadataIndex = 1
+	BlockMetadataIndex_TRANSACTIONS_FILTER BlockMetadataIndex = 2
+	BlockMetadataIndex_ORDERER             BlockMetadataIndex = 3
+)
 ```
 
 ### 2.2、Block序列化

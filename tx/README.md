@@ -4,9 +4,10 @@
 
 Tx，即Transaction，交易或事务。
 
-Tx代码分布在protos/common目录下，目录结构如下：
+Tx代码分布在protos/common、protos/utils目录下，目录结构如下：
 
 * protos/common/common.pb.go，交易的封装即Envelope结构体。也包括Payload、Header、ChannelHeader和SignatureHeader。
+* protos/utils目录，交易相关部分工具函数，包括txutils.go、proputils.go和commonutils.go。
 
 
 ## 2、交易的封装Envelope结构体
@@ -146,4 +147,11 @@ const (
 	TxValidationCode_ILLEGAL_WRITESET             TxValidationCode = 23
 	TxValidationCode_INVALID_OTHER_REASON         TxValidationCode = 255
 )
+//代码在protos/peer/transaction.pb.go
 ```
+
+## 4、交易相关部分工具函数（protos/utils包）
+
+putils更详细内容，参考：[Fabric 1.0源代码笔记 之 putils（protos/utils工具包）](../putils/README.md)
+
+

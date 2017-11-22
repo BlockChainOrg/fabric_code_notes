@@ -90,23 +90,25 @@ func (historyDB *historyDB) CommitLostBlock(block *common.Block) error
 func (historyDB *historyDB) Commit(block *common.Block) error代码如下：
 
 ```go
-blockNo := block.Header.Number
-var tranNo uint64
-dbBatch := leveldbhelper.NewUpdateBatch()
+blockNo := block.Header.Number //区块编号
+var tranNo uint64 //交易编号，初始化值为0
+dbBatch := leveldbhelper.NewUpdateBatch() //leveldb批量更新
 
+//交易验证代码，type TxValidationFlags []uint8
+//交易筛选器
 txsFilter := util.TxValidationFlags(block.Metadata.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])
 if len(txsFilter) == 0 {
 	txsFilter = util.NewTxValidationFlags(len(block.Data.Data))
 	block.Metadata.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER] = txsFilter
 }
 for _, envBytes := range block.Data.Data {
-	if txsFilter.IsInvalid(int(tranNo)) {
+	if txsFilter.IsInvalid(int(tranNo)) { //检查指定的交易是否有效
 		tranNo++
 		continue
 	}
-
+	//[]byte反序列化为common.Envelope
 	env, err := putils.GetEnvelopeFromBlock(envBytes)
-	payload, err := putils.GetPayload(env)
+	payload, err := putils.GetPayload(env) //e.Payload反序列化为common.Payload
 	chdr, err := putils.UnmarshalChannelHeader(payload.Header.ChannelHeader)
 
 	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION {
