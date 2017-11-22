@@ -2,7 +2,8 @@
 
 ## 1、historydb概述
 
-historydb代码分布在core/ledger/kvledger/history/historydb目录下，目录结构如下：
+historydb，用于存储所有块读写集中写集的内容。
+代码分布在core/ledger/kvledger/history/historydb目录下，目录结构如下：
 
 * historydb.go，定义核心接口HistoryDBProvider和HistoryDB。
 * histmgr_helper.go，historydb工具函数。
@@ -144,6 +145,8 @@ dbBatch.Put(savePointKey, height.ToBytes())
 err := historyDB.db.WriteBatch(dbBatch, true)
 //代码在core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb.go
 ```
+
+Tx（Transaction 交易）相关更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx（Transaction 交易）](../tx/README.md)
 
 ## 5、HistoryDBProvider接口实现
 

@@ -119,16 +119,53 @@ type TxSimulator interface {
 //代码在core/ledger/ledger_interface.go
 ```
 
-## 4、kvledger.Provider结构体及方法（实现PeerLedgerProvider接口）
+## 4、kvledger.kvLedger结构体及方法（实现PeerLedger接口）
+
+kvLedger结构体定义：
+
+```go
+type kvLedger struct {
+	ledgerID   string //ledgerID
+	blockStore blkstorage.BlockStore //blkstorage
+	txtmgmt    txmgr.TxMgr //txmgr
+	historyDB  historydb.HistoryDB //historyDB
+}
+//代码在core/ledger/kvledger/kv_ledger.go
+```
+
+涉及方法如下：
+
+```go
+//构造kvLedger
+func newKVLedger(ledgerID string, blockStore blkstorage.BlockStore,versionedDB statedb.VersionedDB, historyDB historydb.HistoryDB) (*kvLedger, error)
+func (l *kvLedger) recoverDBs() error
+func (l *kvLedger) recommitLostBlocks(firstBlockNum uint64, lastBlockNum uint64, recoverables ...recoverable) error
+func (l *kvLedger) GetTransactionByID(txID string) (*peer.ProcessedTransaction, error)
+func (l *kvLedger) GetBlockchainInfo() (*common.BlockchainInfo, error)
+func (l *kvLedger) GetBlockByNumber(blockNumber uint64) (*common.Block, error)
+func (l *kvLedger) GetBlocksIterator(startBlockNumber uint64) (commonledger.ResultsIterator, error)
+func (l *kvLedger) GetBlockByHash(blockHash []byte) (*common.Block, error)
+func (l *kvLedger) GetBlockByTxID(txID string) (*common.Block, error)
+func (l *kvLedger) GetTxValidationCodeByTxID(txID string) (peer.TxValidationCode, error)
+func (l *kvLedger) Prune(policy commonledger.PrunePolicy) error
+func (l *kvLedger) NewTxSimulator() (ledger.TxSimulator, error)
+func (l *kvLedger) NewQueryExecutor() (ledger.QueryExecutor, error)
+func (l *kvLedger) NewHistoryQueryExecutor() (ledger.HistoryQueryExecutor, error)
+func (l *kvLedger) Commit(block *common.Block) error
+func (l *kvLedger) Close()
+//代码在core/ledger/kvledger/kv_ledger.go
+```
+
+## 5、kvledger.Provider结构体及方法（实现PeerLedgerProvider接口）
 
 Provider结构体定义：
 
 ```go
 type Provider struct {
-	idStore            *idStore
-	blockStoreProvider blkstorage.BlockStoreProvider
-	vdbProvider        statedb.VersionedDBProvider
-	historydbProvider  historydb.HistoryDBProvider
+	idStore            *idStore //idStore
+	blockStoreProvider blkstorage.BlockStoreProvider //blkstorage
+	vdbProvider        statedb.VersionedDBProvider //statedb
+	historydbProvider  historydb.HistoryDBProvider //historydb
 }
 //代码在core/ledger/kvledger/kv_ledger_provider.go
 ```
@@ -138,8 +175,20 @@ type Provider struct {
 * statedb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（3）statedb（状态数据库）](statedb.md)
 * historydb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（4）historydb（历史数据库）](historydb.md)
 
+涉及方法如下：
 
-
-## 10、本文使用到的网络内容
-
-* [fabric源码分析5–kvledger的初始化](http://blog.csdn.net/idsuf698987/article/details/75388868)
+```go
+//分别构造idStore、blockStoreProvider、vdbProvider和historydbProvider，并用于构造Provider，并恢复之前未完成创建的Ledger
+func NewProvider() (ledger.PeerLedgerProvider, error)
+func (provider *Provider) Create(genesisBlock *common.Block) (ledger.PeerLedger, error)
+func (provider *Provider) Open(ledgerID string) (ledger.PeerLedger, error)
+func (provider *Provider) openInternal(ledgerID string) (ledger.PeerLedger, error)
+func (provider *Provider) Exists(ledgerID string) (bool, error)
+func (provider *Provider) List() ([]string, error)
+func (provider *Provider) Close()
+//检查是否有之前未完成创建的Ledger，并恢复
+func (provider *Provider) recoverUnderConstructionLedger()
+func (provider *Provider) runCleanup(ledgerID string) error //暂时没有实现
+func panicOnErr(err error, mgsFormat string, args ...interface{}) //panicOnErr
+//代码在core/ledger/kvledger/kv_ledger_provider.go
+```

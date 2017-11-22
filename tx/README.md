@@ -11,6 +11,8 @@ Tx代码分布目录结构如下：
 * core/ledger/kvledger/txmgmt目录
 	* rwsetutil目录，读写集相关结构体及方法。
 　　* version目录，version.Height结构体及方法。
+	* validator目录，Validator接口及实现。
+	* txmgr目录，TxMgr接口及实现。
 
 ## 2、交易的封装Envelope结构体
 
@@ -309,3 +311,76 @@ func (h *Height) Compare(h1 *Height) int //比较两个Height
 func AreSame(h1 *Height, h2 *Height) bool //比较两个Height是否相等
 //代码在core/ledger/kvledger/txmgmt/version/version.go
 ```
+
+## 7、Validator接口及实现（验证读写集）
+
+### 7.1、Validator接口定义
+
+```go
+type Validator interface {
+	//验证和准备批处理
+	ValidateAndPrepareBatch(block *common.Block, doMVCCValidation bool) (*statedb.UpdateBatch, error)
+}
+//代码在core/ledger/kvledger/txmgmt/validator/validator.go
+```
+
+### 7.2、Validator接口实现
+
+Validator接口实现，即statebasedval.Validator结构体及方法。Validator结构体定义如下：
+
+```go
+type Validator struct {
+	db statedb.VersionedDB //statedb
+}
+//代码在core/ledger/kvledger/txmgmt/validator/statebasedval/state_based_validator.go
+```
+
+涉及方法如下：
+
+```go
+func NewValidator(db statedb.VersionedDB) *Validator
+func (v *Validator) validateEndorserTX(envBytes []byte, doMVCCValidation bool, updates *statedb.UpdateBatch) (*rwsetutil.TxRwSet, peer.TxValidationCode, error)
+func (v *Validator) ValidateAndPrepareBatch(block *common.Block, doMVCCValidation bool) (*statedb.UpdateBatch, error)
+func addWriteSetToBatch(txRWSet *rwsetutil.TxRwSet, txHeight *version.Height, batch *statedb.UpdateBatch)
+func (v *Validator) validateTx(txRWSet *rwsetutil.TxRwSet, updates *statedb.UpdateBatch) (peer.TxValidationCode, error)
+func (v *Validator) validateReadSet(ns string, kvReads []*kvrwset.KVRead, updates *statedb.UpdateBatch) (bool, error)
+func (v *Validator) validateKVRead(ns string, kvRead *kvrwset.KVRead, updates *statedb.UpdateBatch) (bool, error)
+func (v *Validator) validateRangeQueries(ns string, rangeQueriesInfo []*kvrwset.RangeQueryInfo, updates *statedb.UpdateBatch) (bool, error)
+func (v *Validator) validateRangeQuery(ns string, rangeQueryInfo *kvrwset.RangeQueryInfo, updates *statedb.UpdateBatch) (bool, error)
+//代码在core/ledger/kvledger/txmgmt/validator/statebasedval/state_based_validator.go
+```
+
+## 8、TxMgr接口及实现（交易管理）
+
+### 8.1、TxMgr接口定义
+
+```go
+type TxMgr interface {
+	NewQueryExecutor() (ledger.QueryExecutor, error)
+	NewTxSimulator() (ledger.TxSimulator, error)
+	ValidateAndPrepare(block *common.Block, doMVCCValidation bool) error
+	GetLastSavepoint() (*version.Height, error)
+	ShouldRecover(lastAvailableBlock uint64) (bool, uint64, error)
+	CommitLostBlock(block *common.Block) error
+	Commit() error
+	Rollback()
+	Shutdown()
+}
+//代码在core/ledger/kvledger/txmgmt/txmgr/txmgr.go
+```
+
+### 8.2、TxMgr接口实现
+
+TxMgr接口实现，即LockBasedTxMgr结构体及方法。LockBasedTxMgr结构体如下：
+
+```go
+type LockBasedTxMgr struct {
+	db           statedb.VersionedDB //db
+	validator    validator.Validator
+	batch        *statedb.UpdateBatch
+	currentBlock *common.Block
+	commitRWLock sync.RWMutex
+}
+//core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/lockbased_txmgr.go
+```
+

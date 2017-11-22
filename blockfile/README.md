@@ -439,7 +439,7 @@ func (mgr *blockfileMgr) close() //关闭blockfileWriter
 func (mgr *blockfileMgr) moveToNextFile() //转至下个新区块文件，打开新文件、并更新检查点信息
 func (mgr *blockfileMgr) addBlock(block *common.Block) error //添加区块，区块写入文件，索引区块
 func (mgr *blockfileMgr) syncIndex() error //同步区块索引
-func (mgr *blockfileMgr) getBlockchainInfo() *common.BlockchainInfo //获取BlockchainInfo
+func (mgr *blockfileMgr) getBlockchainInfo() *common.BlockchainInfo //获取 BlockchainInfo
 func (mgr *blockfileMgr) updateCheckpoint(cpInfo *checkpointInfo) //更新检查点信息
 func (mgr *blockfileMgr) updateBlockchainInfo(latestBlockHash []byte, latestBlock *common.Block) //更新BlockchainInfo
 //按区块哈希获取块，mgr.index.getBlockLocByHash(blockHash)，mgr.fetchBlock(loc)
