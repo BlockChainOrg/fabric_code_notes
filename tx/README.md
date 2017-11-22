@@ -8,7 +8,9 @@ Tx代码分布目录结构如下：
 
 * protos/common/common.pb.go，交易的封装即Envelope结构体。也包括Payload、Header、ChannelHeader和SignatureHeader。
 * protos/utils目录，交易相关部分工具函数，包括txutils.go、proputils.go和commonutils.go。
-* core/ledger/kvledger/txmgmt/rwsetutil目录，读写集相关结构体及方法。
+* core/ledger/kvledger/txmgmt目录
+	* rwsetutil目录，读写集相关结构体及方法。
+　　* version目录，version.Height结构体及方法。
 
 ## 2、交易的封装Envelope结构体
 
@@ -145,7 +147,7 @@ ChaincodeAction结构体：
 
 ```go
 type ChaincodeAction struct {
-	Results []byte
+	Results []byte //TxRwSet序列化
 	Events []byte
 	Response *Response
 	ChaincodeId *ChaincodeID
@@ -216,4 +218,94 @@ putils更详细内容，参考：[Fabric 1.0源代码笔记 之 putils（protos/
 
 ## 5、rwsetutil（读写集）
 
+### 5.1、TxReadWriteSet结构体
 
+```go
+type TxReadWriteSet_DataModel int32
+
+const (
+	TxReadWriteSet_KV TxReadWriteSet_DataModel = 0
+)
+
+type TxReadWriteSet struct {
+	DataModel TxReadWriteSet_DataModel
+	NsRwset   []*NsReadWriteSet
+}
+
+type NsReadWriteSet struct {
+	Namespace string
+	Rwset     []byte //KVRWSet 序列化
+}
+//代码在protos/ledger/rwset/rwset.pb.go
+```
+
+### 5.2、KVRWSet结构体
+
+```go
+type KVRWSet struct {
+	Reads            []*KVRead
+	RangeQueriesInfo []*RangeQueryInfo
+	Writes           []*KVWrite
+}
+
+type KVRead struct {
+	Key     string
+	Version *Version
+}
+
+type KVWrite struct {
+	Key      string
+	IsDelete bool
+	Value    []byte
+}
+
+type Version struct {
+	BlockNum uint64
+	TxNum    uint64
+}
+
+type RangeQueryInfo struct {
+	StartKey     string
+	EndKey       string
+	ItrExhausted bool
+	ReadsInfo isRangeQueryInfo_ReadsInfo
+}
+代码在protos/ledger/rwset/kvrwset/kv_rwset.pb.go
+```
+
+### 5.3、TxRwSet结构体及方法
+
+```go
+type TxRwSet struct {
+	NsRwSets []*NsRwSet
+}
+
+type NsRwSet struct {
+	NameSpace string
+	KvRwSet   *kvrwset.KVRWSet
+}
+//[]byte反序列化后构造NsRwSet，加入NsRwSets
+func (txRwSet *TxRwSet) ToProtoBytes() ([]byte, error)
+func (txRwSet *TxRwSet) FromProtoBytes(protoBytes []byte) error
+func NewKVRead(key string, version *version.Height) *kvrwset.KVRead
+func NewVersion(protoVersion *kvrwset.Version) *version.Height
+func newProtoVersion(height *version.Height) *kvrwset.Version
+func newKVWrite(key string, value []byte) *kvrwset.KVWrite
+//代码在core/ledger/kvledger/txmgmt/rwsetutil/rwset_proto_util.go
+```
+
+## 6、version.Height结构体及方法
+
+```go
+type Height struct {
+	BlockNum uint64 //区块编号
+	TxNum    uint64 //交易编号
+}
+
+func NewHeight(blockNum, txNum uint64) *Height //构造Height
+func NewHeightFromBytes(b []byte) (*Height, int) //[]byte反序列化构造Height
+func (h *Height) ToBytes() []byte //Height序列化
+func (h *Height) Compare(h1 *Height) int //比较两个Height
+func AreSame(h1 *Height, h2 *Height) bool //比较两个Height是否相等
+//代码在core/ledger/kvledger/txmgmt/version/version.go
+```

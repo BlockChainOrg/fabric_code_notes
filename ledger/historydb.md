@@ -7,7 +7,7 @@ historydb代码分布在core/ledger/kvledger/history/historydb目录下，目录
 * historydb.go，定义核心接口HistoryDBProvider和HistoryDB。
 * histmgr_helper.go，historydb工具函数。
 * historyleveldb目录，historydb基于leveldb的实现。
-	* historyleveldb.go，HistoryDBProvider和HistoryDB接口实现，即HistoryDBProvider和historyDB结构体及方法。
+	* historyleveldb.go，HistoryDBProvider和HistoryDB接口实现，即historyleveldb.HistoryDBProvider和historyleveldb.historyDB结构体及方法。
 	* historyleveldb_query_executer.go，定义LevelHistoryDBQueryExecutor和historyScanner结构体及方法。
 
 ## 2、核心接口定义
@@ -26,17 +26,21 @@ HistoryDB接口定义：
 
 ```go
 type HistoryDB interface {
-	//创建ledger.HistoryQueryExecutor
+	//构造 LevelHistoryDBQueryExecutor
 	NewHistoryQueryExecutor(blockStore blkstorage.BlockStore) (ledger.HistoryQueryExecutor, error)
+	//提交Block入historyDB
 	Commit(block *common.Block) error
+	//获取savePointKey，即version.Height
 	GetLastSavepoint() (*version.Height, error)
+	//是否应该恢复，比较lastAvailableBlock和Savepoint
 	ShouldRecover(lastAvailableBlock uint64) (bool, uint64, error)
+	//提交丢失的块
 	CommitLostBlock(block *common.Block) error
 }
 //代码在core/ledger/kvledger/history/historydb/historydb.go
 ```
 
-补充ledger.HistoryQueryExecutor定义：执行历史记录查询。
+补充ledger.HistoryQueryExecutor接口定义：执行历史记录查询。
 
 ```go
 type HistoryQueryExecutor interface {
@@ -59,7 +63,7 @@ func SplitCompositeHistoryKey(bytesToSplit []byte, separator []byte) ([]byte, []
 
 ## 4、HistoryDB接口实现
 
-HistoryDB接口实现，即historyDB结构体及方法。historyDB结构体定义如下：
+HistoryDB接口实现，即historyleveldb.historyDB结构体及方法。historyDB结构体定义如下：
 
 ```go
 type historyDB struct {
@@ -78,11 +82,15 @@ func newHistoryDB(db *leveldbhelper.DBHandle, dbName string) *historyDB
 func (historyDB *historyDB) Open() error
 //do nothing
 func (historyDB *historyDB) Close()
-//
+//提交Block入historyDB，将读写集中写集入库，并更新savePointKey
 func (historyDB *historyDB) Commit(block *common.Block) error
+//构造 LevelHistoryDBQueryExecutor
 func (historyDB *historyDB) NewHistoryQueryExecutor(blockStore blkstorage.BlockStore) (ledger.HistoryQueryExecutor, error)
+获取savePointKey，即version.Height
 func (historyDB *historyDB) GetLastSavepoint() (*version.Height, error)
+//是否应该恢复，比较lastAvailableBlock和Savepoint
 func (historyDB *historyDB) ShouldRecover(lastAvailableBlock uint64) (bool, uint64, error)
+//提交丢失的块，即调用historyDB.Commit(block)
 func (historyDB *historyDB) CommitLostBlock(block *common.Block) error
 //代码在core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb.go
 ```
@@ -115,11 +123,12 @@ for _, envBytes := range block.Data.Data {
 	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION { //背书交易，type HeaderType int32
 		respPayload, err := putils.GetActionFromEnvelope(envBytes) //获取ChaincodeAction
 		txRWSet := &rwsetutil.TxRwSet{}
-		err = txRWSet.FromProtoBytes(respPayload.Results)
+		err = txRWSet.FromProtoBytes(respPayload.Results) //[]byte反序列化后构造NsRwSet，加入txRWSet.NsRwSets
 		for _, nsRWSet := range txRWSet.NsRwSets {
 			ns := nsRWSet.NameSpace
 			for _, kvWrite := range nsRWSet.KvRwSet.Writes {
 				writeKey := kvWrite.Key
+				//txRWSet中写集入库
 				compositeHistoryKey := historydb.ConstructCompositeHistoryKey(ns, writeKey, blockNo, tranNo)
 				dbBatch.Put(compositeHistoryKey, emptyValue)
 			}
@@ -134,4 +143,69 @@ height := version.NewHeight(blockNo, tranNo)
 dbBatch.Put(savePointKey, height.ToBytes())
 err := historyDB.db.WriteBatch(dbBatch, true)
 //代码在core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb.go
+```
+
+## 5、HistoryDBProvider接口实现
+
+HistoryDBProvider接口实现，即historyleveldb.HistoryDBProvider结构体和方法。
+
+```go
+type HistoryDBProvider struct {
+	dbProvider *leveldbhelper.Provider
+}
+
+//构造HistoryDBProvider
+func NewHistoryDBProvider() *HistoryDBProvider
+//获取HistoryDB
+func (provider *HistoryDBProvider) GetDBHandle(dbName string) (historydb.HistoryDB, error)
+//关闭所有HistoryDB句柄，调取provider.dbProvider.Close()
+func (provider *HistoryDBProvider) Close()
+//代码在core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb.go
+```
+
+## 6、LevelHistoryDBQueryExecutor和historyScanner结构体及方法
+
+LevelHistoryDBQueryExecutor结构体及方法：实现ledger.HistoryQueryExecutor接口。
+
+```go
+type LevelHistoryDBQueryExecutor struct {
+	historyDB  *historyDB
+	blockStore blkstorage.BlockStore //用于传递给historyScanner
+}
+//按key查historyDB，调用q.historyDB.db.GetIterator(compositeStartKey, compositeEndKey)
+func (q *LevelHistoryDBQueryExecutor) GetHistoryForKey(namespace string, key string) (commonledger.ResultsIterator, error) 
+//代码在core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb_query_executer.go
+```
+
+historyScanner结构体及方法：实现ledger.ResultsIterator接口。
+
+```go
+type historyScanner struct {
+	compositePartialKey []byte //ns 0x00 key 0x00
+	namespace           string
+	key                 string
+	dbItr               iterator.Iterator //leveldb迭代器
+	blockStore          blkstorage.BlockStore
+}
+
+//构造historyScanner
+func newHistoryScanner(compositePartialKey []byte, namespace string, key string, dbItr iterator.Iterator, blockStore blkstorage.BlockStore) *historyScanner
+//按迭代器中key取blockNum和tranNum，再按blockNum和tranNum从blockStore中取Envelope，然后从Envelope的txRWSet.NsRwSets中按key查找并构造queryresult.KeyModification
+func (scanner *historyScanner) Next() (commonledger.QueryResult, error)
+func (scanner *historyScanner) Close() //scanner.dbItr.Release()
+从Envelope的txRWSet.NsRwSets中按key查找并构造queryresult.KeyModification
+func getKeyModificationFromTran(tranEnvelope *common.Envelope, namespace string, key string) (commonledger.QueryResult, error)
+//代码在core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb_query_executer.go
+```
+
+补充queryresult.KeyModification：
+
+```go
+type KeyModification struct {
+	TxId      string //交易ID，ChannelHeader.TxId
+	Value     []byte //读写集中Value，KVWrite.Value
+	Timestamp *google_protobuf.Timestamp //ChannelHeader.Timestamp
+	IsDelete  bool //KVWrite.IsDelete
+}
+//代码在protos/ledger/queryresult/kv_query_result.pb.go
 ```
