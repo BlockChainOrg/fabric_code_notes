@@ -106,13 +106,14 @@ for _, envBytes := range block.Data.Data {
 		tranNo++
 		continue
 	}
-	//[]byte反序列化为common.Envelope
+	//[]byte反序列化为Envelope
 	env, err := putils.GetEnvelopeFromBlock(envBytes)
-	payload, err := putils.GetPayload(env) //e.Payload反序列化为common.Payload
+	payload, err := putils.GetPayload(env) //e.Payload反序列化为Payload
+	//[]byte反序列化为ChannelHeader
 	chdr, err := putils.UnmarshalChannelHeader(payload.Header.ChannelHeader)
 
-	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION {
-		respPayload, err := putils.GetActionFromEnvelope(envBytes)
+	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION { //背书交易，type HeaderType int32
+		respPayload, err := putils.GetActionFromEnvelope(envBytes) //获取ChaincodeAction
 		txRWSet := &rwsetutil.TxRwSet{}
 		err = txRWSet.FromProtoBytes(respPayload.Results)
 		for _, nsRWSet := range txRWSet.NsRwSets {

@@ -8,8 +8,12 @@ putils，即protos/utils工具包，代码分布在：protos/utils目录下。
 ## 2、txutils
 
 ```go
+//TransactionAction.Payload => ChaincodeActionPayload
+//ChaincodeActionPayload.Action.ProposalResponsePayload => ProposalResponsePayload
+//ProposalResponsePayload.Extension => ChaincodeAction
+//返回ChaincodeActionPayload和ChaincodeAction
 func GetPayloads(txActions *peer.TransactionAction) (*peer.ChaincodeActionPayload, *peer.ChaincodeAction, error)
-//[]byte反序列化为common.Envelope
+//[]byte反序列化为Envelope
 func GetEnvelopeFromBlock(data []byte) (*common.Envelope, error)
 func CreateSignedEnvelope(txType common.HeaderType, channelID string, signer crypto.LocalSigner, dataMsg proto.Message, msgVersion int32, epoch uint64) (*common.Envelope, error) 
 func CreateSignedTx(proposal *peer.Proposal, signer msp.SigningIdentity, resps ...*peer.ProposalResponse) (*common.Envelope, error) {
@@ -40,8 +44,9 @@ func GetResponse(resBytes []byte) (*peer.Response, error)
 func GetChaincodeEvents(eBytes []byte) (*peer.ChaincodeEvent, error)
 func GetProposalResponsePayload(prpBytes []byte) (*peer.ProposalResponsePayload, error)
 func GetProposal(propBytes []byte) (*peer.Proposal, error)
-//e.Payload反序列化为common.Payload
+//e.Payload反序列化为Payload
 func GetPayload(e *common.Envelope) (*common.Payload, error)
+//[]byte反序列化为Transaction
 func GetTransaction(txBytes []byte) (*peer.Transaction, error)
 func GetChaincodeActionPayload(capBytes []byte) (*peer.ChaincodeActionPayload, error)
 func GetChaincodeProposalPayload(bytes []byte) (*peer.ChaincodeProposalPayload, error)
@@ -96,6 +101,7 @@ func SetTxID(channelHeader *cb.ChannelHeader, signatureHeader *cb.SignatureHeade
 func MakePayloadHeader(ch *cb.ChannelHeader, sh *cb.SignatureHeader) *cb.Header
 func NewSignatureHeaderOrPanic(signer crypto.LocalSigner) *cb.SignatureHeader
 func SignOrPanic(signer crypto.LocalSigner, msg []byte) []byte
+//[]byte反序列化为ChannelHeader
 func UnmarshalChannelHeader(bytes []byte) (*cb.ChannelHeader, error)
 func UnmarshalChaincodeID(bytes []byte) (*pb.ChaincodeID, error)
 func IsConfigBlock(block *cb.Block) bool

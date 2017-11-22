@@ -4,11 +4,11 @@
 
 Tx，即Transaction，交易或事务。
 
-Tx代码分布在protos/common、protos/utils目录下，目录结构如下：
+Tx代码分布目录结构如下：
 
 * protos/common/common.pb.go，交易的封装即Envelope结构体。也包括Payload、Header、ChannelHeader和SignatureHeader。
 * protos/utils目录，交易相关部分工具函数，包括txutils.go、proputils.go和commonutils.go。
-
+* core/ledger/kvledger/txmgmt/rwsetutil目录，读写集相关结构体及方法。
 
 ## 2、交易的封装Envelope结构体
 
@@ -21,28 +21,20 @@ type Envelope struct { //用签名包装Payload，以便对信息做身份验证
 	Payload []byte //Payload序列化
 	Signature []byte //Payload header中指定的创建者签名
 }
-
-func (m *Envelope) GetPayload() []byte //获取m.Payload
-func (m *Envelope) GetSignature() []byte //m.Signature
 //代码在protos/common/common.pb.go
 ```
 
-### 2.2、Payload结构体
+### 2.2、Payload相关结构体
 
-Payload直译为有效载荷。
+Payload直译为有效载荷。Payload结构体：
 
 ```go
 type Payload struct {
-	Header *Header
-	Data []byte
+	Header *Header //Header
+	Data []byte //Transaction序列化
 }
-
-func (m *Payload) GetHeader() *Header //获取m.Header
-func (m *Payload) GetData() []byte //获取m.Data
 //代码在protos/common/common.pb.go
 ```
-
-### 2.3、Header相关结构体
 
 Header结构体：
 
@@ -51,9 +43,6 @@ type Header struct {
 	ChannelHeader   []byte
 	SignatureHeader []byte
 }
-
-func (m *Header) GetChannelHeader() []byte //获取m.ChannelHeader
-func (m *Header) GetSignatureHeader() []byte //获取m.SignatureHeader
 //代码在protos/common/common.pb.go
 ```
 
@@ -69,14 +58,23 @@ type ChannelHeader struct {
 	Epoch uint64 //纪元
 	Extension []byte //可附加的扩展
 }
+//代码在protos/common/common.pb.go
+```
 
-func (m *ChannelHeader) GetType() int32 //m.Type
-func (m *ChannelHeader) GetVersion() int32 //m.Version
-func (m *ChannelHeader) GetTimestamp() *google_protobuf.Timestamp //m.Timestamp
-func (m *ChannelHeader) GetChannelId() string //m.ChannelId
-func (m *ChannelHeader) GetTxId() string //m.TxId
-func (m *ChannelHeader) GetEpoch() uint64 //m.Epoch
-func (m *ChannelHeader) GetExtension() []byte //m.Extension
+补充HeaderType:
+
+```go
+type HeaderType int32
+
+const (
+	HeaderType_MESSAGE              HeaderType = 0
+	HeaderType_CONFIG               HeaderType = 1
+	HeaderType_CONFIG_UPDATE        HeaderType = 2
+	HeaderType_ENDORSER_TRANSACTION HeaderType = 3
+	HeaderType_ORDERER_TRANSACTION  HeaderType = 4
+	HeaderType_DELIVER_SEEK_INFO    HeaderType = 5
+	HeaderType_CHAINCODE_PACKAGE    HeaderType = 6
+)
 //代码在protos/common/common.pb.go
 ```
 
@@ -87,10 +85,72 @@ type SignatureHeader struct {
 	Creator []byte //消息的创建者, 指定为证书链
 	Nonce []byte //可能只使用一次的任意数字，可用于检测重播攻击
 }
-
-func (m *SignatureHeader) GetCreator() []byte //m.Creator
-func (m *SignatureHeader) GetNonce() []byte //m.Nonce
 //代码在protos/common/common.pb.go
+```
+
+### 2.3、Transaction相关结构体
+
+Transaction结构体：
+
+```go
+type Transaction struct {
+	Actions []*TransactionAction //Payload.Data是个TransactionAction数组，容纳每个交易
+}
+//代码在protos/peer/transaction.pb.go
+```
+
+TransactionAction结构体：
+
+```go
+type TransactionAction struct {
+	Header []byte
+	Payload []byte
+}
+//代码在protos/peer/transaction.pb.go
+```
+
+### 2.4、ChaincodeActionPayload相关结构体
+
+ChaincodeActionPayload结构体：
+
+```go
+type ChaincodeActionPayload struct {
+	ChaincodeProposalPayload []byte
+	Action *ChaincodeEndorsedAction
+}
+//代码在protos/peer/transaction.pb.go
+```
+
+ChaincodeEndorsedAction结构体：
+
+```go
+type ChaincodeEndorsedAction struct {
+	ProposalResponsePayload []byte //ProposalResponsePayload序列化
+	Endorsements []*Endorsement
+}
+//代码在protos/peer/transaction.pb.go
+```
+
+ProposalResponsePayload结构体：
+
+```go
+type ProposalResponsePayload struct {
+	ProposalHash []byte
+	Extension []byte //ChaincodeAction序列化
+}
+//代码在protos/peer/proposal_response.pb.go
+```
+
+ChaincodeAction结构体：
+
+```go
+type ChaincodeAction struct {
+	Results []byte
+	Events []byte
+	Response *Response
+	ChaincodeId *ChaincodeID
+}
+//代码在protos/peer/proposal.pb.go
 ```
 
 ## 3、交易验证代码TxValidationFlags
@@ -153,5 +213,7 @@ const (
 ## 4、交易相关部分工具函数（protos/utils包）
 
 putils更详细内容，参考：[Fabric 1.0源代码笔记 之 putils（protos/utils工具包）](../putils/README.md)
+
+## 5、rwsetutil（读写集）
 
 
