@@ -15,21 +15,56 @@ wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
 
 <TABLE>
 <TR>
-<TD>模块</TD>
-<TD>代码量</TD>
-<TD>代码量占比</TD>
+	<TD>模块</TD>
+	<TD>代码量</TD>
+	<TD>代码量占比</TD>
+</TR>
+<TR>
+	<TD>bccsp</TD>
+	<TD>5605</TD>
+	<TD>7.42%</TD>
+</TR>
+<TR>
+	<TD>common</TD>
+	<TD>12998</TD>
+	<TD>17.21%</TD>
+</TR>
+<TR>
+	<TD>core</TD>
+	<TD>22613</TD>
+	<TD>29.95%</TD>
+</TR>
+<TR>
+	<TD>events</TD>
+	<TD>1069</TD>
+	<TD>1.42%</TD>
+</TR>
+<TR>
+	<TD>gossip</TD>
+	<TD>9389</TD>
+	<TD>12.43%</TD>
+</TR>
+<TR>
+	<TD>msp</TD>
+	<TD>2425</TD>
+	<TD>3.21%</TD>
+</TR>
+<TR>
+	<TD>orderer</TD>
+	<TD>5199</TD>
+	<TD>6.89%</TD>
+</TR>
+<TR>
+	<TD>peer</TD>
+	<TD>4135</TD>
+	<TD>5.48%</TD>
+</TR>
+<TR>
+	<TD>protos</TD>
+	<TD>12078</TD>
+	<TD>16.00%</TD>
 </TR>
 </TABLE>
-bccsp	|	5605	|	7.42%
-common	|	12998	|	17.21%
-core	|	22613	|	29.95%
-events	|	1069	|	1.42%
-gossip	|	9389	|	12.43%
-msp		|	2425	|	3.21%
-orderer	|	5199	|	6.89%
-peer	|	4135	|	5.48%
-protos	|	12078	|	16.00%
-
 
 ## 3、详情
 
