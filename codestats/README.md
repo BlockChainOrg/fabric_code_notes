@@ -13,7 +13,13 @@ wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
 
 ## 2、代码分布
 
-模块	|	代码量	|	代码量占比
+<TABLE>
+<TR>
+<TD>模块</TD>
+<TD>代码量</TD>
+<TD>代码量占比</TD>
+</TR>
+</TABLE>
 bccsp	|	5605	|	7.42%
 common	|	12998	|	17.21%
 core	|	22613	|	29.95%
@@ -23,6 +29,7 @@ msp		|	2425	|	3.21%
 orderer	|	5199	|	6.89%
 peer	|	4135	|	5.48%
 protos	|	12078	|	16.00%
+
 
 ## 3、详情
 
