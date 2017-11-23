@@ -1,14 +1,31 @@
 # Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计
 
-排除test（测试）、vendor（依赖）、mocks（模拟）、examples（范例）外，go核心代码文件392，核心代码量76230行。
+## 1、概述
+
+排除test、vendor、mocks、example，go核心代码文件386个，核心代码行75511行。
+
 ```bash
-find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$' | wc -l
-392
+find ./ |grep -vE 'test|vendor|mocks|example' | grep '\.go$' | wc -l
+386
 wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
-76230 total
+75511 total
 ```
 
-详情如下：
+## 2、代码分布
+
+模块	|	代码量	|	代码量占比
+bccsp	|	5605	|	7.42%
+common	|	12998	|	17.21%
+core	|	22613	|	29.95%
+events	|	1069	|	1.42%
+gossip	|	9389	|	12.43%
+msp		|	2425	|	3.21%
+orderer	|	5199	|	6.89%
+peer	|	4135	|	5.48%
+protos	|	12078	|	16.00%
+
+## 3、详情
+
 ```bash
      65 ./bccsp/aesopts.go
     144 ./bccsp/bccsp.go
@@ -185,18 +202,12 @@ wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
      88 ./core/deliverservice/requester.go
     537 ./core/endorser/endorser.go
      72 ./core/fsm.go
-    134 ./core/ledger/kvledger/example/app.go
-     42 ./core/ledger/kvledger/example/committer.go
-     48 ./core/ledger/kvledger/example/consenter.go
-    190 ./core/ledger/kvledger/example/main/example.go
-    175 ./core/ledger/kvledger/example/marble_app.go
      60 ./core/ledger/kvledger/history/historydb/histmgr_helper.go
      41 ./core/ledger/kvledger/history/historydb/historydb.go
     217 ./core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb.go
     155 ./core/ledger/kvledger/history/historydb/historyleveldb/historyleveldb_query_executer.go
     247 ./core/ledger/kvledger/kv_ledger.go
     341 ./core/ledger/kvledger/kv_ledger_provider.go
-    130 ./core/ledger/kvledger/marble_example/main/marble_example.go
      33 ./core/ledger/kvledger/recovery.go
     268 ./core/ledger/kvledger/txmgmt/rwsetutil/query_results_helper.go
     123 ./core/ledger/kvledger/txmgmt/rwsetutil/rwset_builder.go
@@ -402,5 +413,7 @@ wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
     288 ./protos/utils/commonutils.go
     537 ./protos/utils/proputils.go
     454 ./protos/utils/txutils.go
-  76230 total
+  75511 total
 ```
+
+	

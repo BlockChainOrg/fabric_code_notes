@@ -10,7 +10,7 @@ Tx代码分布目录结构如下：
 * protos/utils目录，交易相关部分工具函数，包括txutils.go、proputils.go和commonutils.go。
 * core/ledger/kvledger/txmgmt目录
 	* rwsetutil目录，读写集相关结构体及方法。
-　　* version目录，version.Height结构体及方法。
+	* version目录，version.Height结构体及方法。
 	* validator目录，Validator接口及实现。
 	* txmgr目录，TxMgr接口及实现。
 
