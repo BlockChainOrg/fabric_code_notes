@@ -218,28 +218,9 @@ const (
 
 putils更详细内容，参考：[Fabric 1.0源代码笔记 之 putils（protos/utils工具包）](../putils/README.md)
 
-## 5、rwsetutil（读写集）
+## 5、RWSet（读写集）
 
-### 5.3、TxRwSet结构体及方法
-
-```go
-type TxRwSet struct {
-	NsRwSets []*NsRwSet
-}
-
-type NsRwSet struct {
-	NameSpace string
-	KvRwSet   *kvrwset.KVRWSet
-}
-//[]byte反序列化后构造NsRwSet，加入NsRwSets
-func (txRwSet *TxRwSet) ToProtoBytes() ([]byte, error)
-func (txRwSet *TxRwSet) FromProtoBytes(protoBytes []byte) error
-func NewKVRead(key string, version *version.Height) *kvrwset.KVRead
-func NewVersion(protoVersion *kvrwset.Version) *version.Height
-func newProtoVersion(height *version.Height) *kvrwset.Version
-func newKVWrite(key string, value []byte) *kvrwset.KVWrite
-//代码在core/ledger/kvledger/txmgmt/rwsetutil/rwset_proto_util.go
-```
+RWSet更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx（1）RWSet（读写集）](rwset.md)
 
 ## 6、version.Height结构体及方法
 

@@ -63,7 +63,28 @@ type RangeQueryInfo struct {
 代码在protos/ledger/rwset/kvrwset/kv_rwset.pb.go
 ```
 
-3、TxRwSet结构体（core）
+## 3、TxRwSet结构体（core）
+
+![](TTxRwSet.png)
+
+```go
+type TxRwSet struct {
+	NsRwSets []*NsRwSet
+}
+
+type NsRwSet struct {
+	NameSpace string
+	KvRwSet   *kvrwset.KVRWSet
+}
+//[]byte反序列化后构造NsRwSet，加入NsRwSets
+func (txRwSet *TxRwSet) ToProtoBytes() ([]byte, error)
+func (txRwSet *TxRwSet) FromProtoBytes(protoBytes []byte) error
+func NewKVRead(key string, version *version.Height) *kvrwset.KVRead
+func NewVersion(protoVersion *kvrwset.Version) *version.Height
+func newProtoVersion(height *version.Height) *kvrwset.Version
+func newKVWrite(key string, value []byte) *kvrwset.KVWrite
+//代码在core/ledger/kvledger/txmgmt/rwsetutil/rwset_proto_util.go
+```
 
 
 
