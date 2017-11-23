@@ -11,6 +11,7 @@
 * [Fabric 1.0源代码笔记 之 LevelDB（KV数据库）](leveldb/README.md)
 * [Fabric 1.0源代码笔记 之 blockfile（区块文件存储）](blockfile/README.md)
 * [Fabric 1.0源代码笔记 之 Tx（Transaction 交易）](tx/README.md)
+	* [（1）RWSet（读写集）](tx/rwset.md)
 * [Fabric 1.0源代码笔记 之 putils（protos/utils工具包）](putils/README.md)
 * [Fabric 1.0源代码笔记 之 Ledger（账本）](ledger/README.md)
 	* [（1）idStore（ledgerID数据库）](ledger/idstore.md)
