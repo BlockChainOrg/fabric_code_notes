@@ -21,5 +21,5 @@
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](ecdsa/README.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](abbreviation/README.md)
 * [Fabric 1.0源代码笔记 之 附录-Fabric使用的第三方包](third_party_packages/README.md)
-
+* [Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计(codestats/README.md)
 
