@@ -361,10 +361,15 @@ type queryHelper struct {
 	doneInvoked  bool //是否调用完成
 }
 
+//statedb中获取versionedValue，并加入rwsetBuilder的nsRWs.readMap中
 func (h *queryHelper) getState(ns string, key string) ([]byte, error)
+//statedb中获取多个versionedValue，并加入rwsetBuilder的nsRWs.readMap中
 func (h *queryHelper) getStateMultipleKeys(namespace string, keys []string) ([][]byte, error)
+//构造resultsItr，并加入queryHelper.itrs
 func (h *queryHelper) getStateRangeScanIterator(namespace string, startKey string, endKey string) (commonledger.ResultsIterator, error)
+执行查询并构造queryResultsItr
 func (h *queryHelper) executeQuery(namespace, query string) (commonledger.ResultsIterator, error)
+//done
 func (h *queryHelper) done()
 func (h *queryHelper) checkDone()
 //代码在core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/helper.go
