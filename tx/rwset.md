@@ -5,7 +5,65 @@
 在背书节点模拟Transaction期间，为交易准备了一个读写集合。
 Read Set包含模拟Transaction读取的Key和版本的列表，Write Set包含Key、写入的新值、以及删除标记（是否删除Key）。
 
-## 2、TxReadWriteSet结构体
+## 2、TxReadWriteSet结构体（protos）
 
 ![](TxReadWriteSet.png)
+
+TxReadWriteSet结构体：
+
+```go
+type TxReadWriteSet_DataModel int32
+const (
+	TxReadWriteSet_KV TxReadWriteSet_DataModel = 0
+)
+
+type TxReadWriteSet struct {
+	DataModel TxReadWriteSet_DataModel
+	NsRwset   []*NsReadWriteSet
+}
+
+type NsReadWriteSet struct {
+	Namespace string
+	Rwset     []byte //KVRWSet 序列化
+}
+//代码在protos/ledger/rwset/rwset.pb.go
+```
+
+KVRWSet结构体：
+
+```go
+type KVRWSet struct {
+	Reads            []*KVRead
+	RangeQueriesInfo []*RangeQueryInfo
+	Writes           []*KVWrite
+}
+
+type KVRead struct {
+	Key     string
+	Version *Version
+}
+
+type KVWrite struct {
+	Key      string
+	IsDelete bool
+	Value    []byte
+}
+
+type Version struct {
+	BlockNum uint64
+	TxNum    uint64
+}
+
+type RangeQueryInfo struct {
+	StartKey     string
+	EndKey       string
+	ItrExhausted bool
+	ReadsInfo isRangeQueryInfo_ReadsInfo
+}
+代码在protos/ledger/rwset/kvrwset/kv_rwset.pb.go
+```
+
+3、TxRwSet结构体（core）
+
+
 

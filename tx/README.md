@@ -220,61 +220,6 @@ putils更详细内容，参考：[Fabric 1.0源代码笔记 之 putils（protos/
 
 ## 5、rwsetutil（读写集）
 
-### 5.1、TxReadWriteSet结构体
-
-```go
-type TxReadWriteSet_DataModel int32
-
-const (
-	TxReadWriteSet_KV TxReadWriteSet_DataModel = 0
-)
-
-type TxReadWriteSet struct {
-	DataModel TxReadWriteSet_DataModel
-	NsRwset   []*NsReadWriteSet
-}
-
-type NsReadWriteSet struct {
-	Namespace string
-	Rwset     []byte //KVRWSet 序列化
-}
-//代码在protos/ledger/rwset/rwset.pb.go
-```
-
-### 5.2、KVRWSet结构体
-
-```go
-type KVRWSet struct {
-	Reads            []*KVRead
-	RangeQueriesInfo []*RangeQueryInfo
-	Writes           []*KVWrite
-}
-
-type KVRead struct {
-	Key     string
-	Version *Version
-}
-
-type KVWrite struct {
-	Key      string
-	IsDelete bool
-	Value    []byte
-}
-
-type Version struct {
-	BlockNum uint64
-	TxNum    uint64
-}
-
-type RangeQueryInfo struct {
-	StartKey     string
-	EndKey       string
-	ItrExhausted bool
-	ReadsInfo isRangeQueryInfo_ReadsInfo
-}
-代码在protos/ledger/rwset/kvrwset/kv_rwset.pb.go
-```
-
 ### 5.3、TxRwSet结构体及方法
 
 ```go
