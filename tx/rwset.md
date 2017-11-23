@@ -5,6 +5,14 @@
 在背书节点模拟Transaction期间，为交易准备了一个读写集合。
 Read Set包含模拟Transaction读取的Key和版本的列表，Write Set包含Key、写入的新值、以及删除标记（是否删除Key）。
 
+RWSet相关代码分布在protos/ledger/rwset、core/ledger/kvledger/txmgmt/rwsetutil目录下。目录结构如下：
+
+* protos/ledger/rwset目录：
+	* rwset.pb.go，TxReadWriteSet和NsReadWriteSet结构体定义。
+	* kv_rwset.pb.go，KVRWSet、KVRead、KVWrite、Version、RangeQueryInfo结构体定义，以及isRangeQueryInfo_ReadsInfo接口定义。
+* core/ledger/kvledger/txmgmt/rwsetutil目录：
+	* rwset_proto_util.go，TxRwSet和NsRwSet结构体及方法。
+
 ## 2、TxReadWriteSet结构体（protos）
 
 ![](TxReadWriteSet.png)
@@ -63,9 +71,9 @@ type RangeQueryInfo struct {
 代码在protos/ledger/rwset/kvrwset/kv_rwset.pb.go
 ```
 
-## 3、TxRwSet结构体（core）
+## 3、TxRwSet结构体及方法（core）
 
-![](TTxRwSet.png)
+![](TxRwSet.png)
 
 ```go
 type TxRwSet struct {
