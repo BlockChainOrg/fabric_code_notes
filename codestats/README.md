@@ -2,67 +2,62 @@
 
 ## 1、概述
 
-排除test、vendor、mocks、example，go核心代码文件386个，核心代码行75511行。
+除test、vendor、mocks、example、protos外，go核心代码文件341个，核心代码行64152行。
 
 ```bash
-find ./ |grep -vE 'test|vendor|mocks|example' | grep '\.go$' | wc -l
-386
-wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
-75511 total
+find ./ |grep -vE 'test|vendor|mocks|example|protos' | grep '\.go$' | wc -l
+341
+wc -l `find ./ |grep -vE 'test|vendor|mocks|example|protos' | grep '\.go$'`
+63433 total
 ```
 
 ## 2、代码分布
 
 <TABLE>
 <TR>
-	<TD>模块</TD>
+	<TD>目录</TD>
 	<TD>代码量</TD>
 	<TD>代码量占比</TD>
 </TR>
 <TR>
 	<TD>bccsp</TD>
 	<TD>5605</TD>
-	<TD>7.42%</TD>
+	<TD>8.84%</TD>
 </TR>
 <TR>
 	<TD>common</TD>
 	<TD>12998</TD>
-	<TD>17.21%</TD>
+	<TD>20.49%</TD>
 </TR>
 <TR>
 	<TD>core</TD>
 	<TD>22613</TD>
-	<TD>29.95%</TD>
+	<TD>35.65%</TD>
 </TR>
 <TR>
 	<TD>events</TD>
 	<TD>1069</TD>
-	<TD>1.42%</TD>
+	<TD>1.69%</TD>
 </TR>
 <TR>
 	<TD>gossip</TD>
 	<TD>9389</TD>
-	<TD>12.43%</TD>
+	<TD>14.80%</TD>
 </TR>
 <TR>
 	<TD>msp</TD>
 	<TD>2425</TD>
-	<TD>3.21%</TD>
+	<TD>3.82%</TD>
 </TR>
 <TR>
 	<TD>orderer</TD>
 	<TD>5199</TD>
-	<TD>6.89%</TD>
+	<TD>8.20%</TD>
 </TR>
 <TR>
 	<TD>peer</TD>
 	<TD>4135</TD>
-	<TD>5.48%</TD>
-</TR>
-<TR>
-	<TD>protos</TD>
-	<TD>12078</TD>
-	<TD>16.00%</TD>
+	<TD>6.52%</TD>
 </TR>
 </TABLE>
 
@@ -410,52 +405,7 @@ wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
     382 ./peer/node/start.go
      60 ./peer/node/status.go
      51 ./peer/version/version.go
-     88 ./protos/common/block.go
-     88 ./protos/common/common.go
-    605 ./protos/common/common.pb.go
-    107 ./protos/common/configtx.go
-    397 ./protos/common/configtx.pb.go
-    219 ./protos/common/configuration.go
-    115 ./protos/common/configuration.pb.go
-     69 ./protos/common/ledger.pb.go
-     41 ./protos/common/policies.go
-    348 ./protos/common/policies.pb.go
-     95 ./protos/common/signed_data.go
-    551 ./protos/gossip/extensions.go
-   1710 ./protos/gossip/message.pb.go
-    134 ./protos/ledger/queryresult/kv_query_result.pb.go
-     49 ./protos/ledger/rwset/kvrwset/helper.go
-    410 ./protos/ledger/rwset/kvrwset/kv_rwset.pb.go
-    127 ./protos/ledger/rwset/rwset.pb.go
-     89 ./protos/msp/identities.pb.go
-     39 ./protos/msp/msp_config.go
-    355 ./protos/msp/msp_config.pb.go
-     43 ./protos/msp/msp_principal.go
-    230 ./protos/msp/msp_principal.pb.go
-    650 ./protos/orderer/ab.pb.go
-    132 ./protos/orderer/configuration.go
-    156 ./protos/orderer/configuration.pb.go
-    275 ./protos/orderer/kafka.pb.go
-    436 ./protos/peer/admin.pb.go
-    322 ./protos/peer/chaincode.pb.go
-     79 ./protos/peer/chaincode_event.pb.go
-    482 ./protos/peer/chaincode_shim.pb.go
-     44 ./protos/peer/chaincodeunmarshall.go
-    124 ./protos/peer/configuration.go
-     81 ./protos/peer/configuration.pb.go
-    660 ./protos/peer/events.pb.go
-     29 ./protos/peer/init.go
-    157 ./protos/peer/peer.pb.go
-    289 ./protos/peer/proposal.pb.go
-    236 ./protos/peer/proposal_response.pb.go
-    165 ./protos/peer/query.pb.go
-     80 ./protos/peer/signed_cc_dep_spec.pb.go
-    365 ./protos/peer/transaction.pb.go
-    128 ./protos/utils/blockutils.go
-    288 ./protos/utils/commonutils.go
-    537 ./protos/utils/proputils.go
-    454 ./protos/utils/txutils.go
-  75511 total
+  63433 total
 ```
 
 	

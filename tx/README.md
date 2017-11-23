@@ -338,6 +338,7 @@ type Validator struct {
 涉及方法如下：
 
 ```go
+//构造Validator
 func NewValidator(db statedb.VersionedDB) *Validator
 func (v *Validator) validateEndorserTX(envBytes []byte, doMVCCValidation bool, updates *statedb.UpdateBatch) (*rwsetutil.TxRwSet, peer.TxValidationCode, error)
 func (v *Validator) ValidateAndPrepareBatch(block *common.Block, doMVCCValidation bool) (*statedb.UpdateBatch, error)
@@ -359,6 +360,7 @@ type TxMgr interface {
 	NewQueryExecutor() (ledger.QueryExecutor, error)
 	NewTxSimulator() (ledger.TxSimulator, error)
 	ValidateAndPrepare(block *common.Block, doMVCCValidation bool) error
+	//返回statedb一致的最高事务的高度
 	GetLastSavepoint() (*version.Height, error)
 	ShouldRecover(lastAvailableBlock uint64) (bool, uint64, error)
 	CommitLostBlock(block *common.Block) error
@@ -375,12 +377,88 @@ TxMgr接口实现，即LockBasedTxMgr结构体及方法。LockBasedTxMgr结构�
 
 ```go
 type LockBasedTxMgr struct {
-	db           statedb.VersionedDB //db
-	validator    validator.Validator
-	batch        *statedb.UpdateBatch
-	currentBlock *common.Block
-	commitRWLock sync.RWMutex
+	db           statedb.VersionedDB //statedb
+	validator    validator.Validator //Validator
+	batch        *statedb.UpdateBatch //批处理
+	currentBlock *common.Block //Block
+	commitRWLock sync.RWMutex //锁
 }
-//core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/lockbased_txmgr.go
+//代码在core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/lockbased_txmgr.go
 ```
 
+涉及方法如下：
+
+```go
+//构造LockBasedTxMgr
+func NewLockBasedTxMgr(db statedb.VersionedDB) *LockBasedTxMgr
+//调取txmgr.db.GetLatestSavePoint()，返回statedb一致的最高事务的高度
+func (txmgr *LockBasedTxMgr) GetLastSavepoint() (*version.Height, error)
+//调取newQueryExecutor(txmgr)
+func (txmgr *LockBasedTxMgr) NewQueryExecutor() (ledger.QueryExecutor, error)
+func (txmgr *LockBasedTxMgr) NewTxSimulator() (ledger.TxSimulator, error)
+func (txmgr *LockBasedTxMgr) ValidateAndPrepare(block *common.Block, doMVCCValidation bool) error
+func (txmgr *LockBasedTxMgr) Shutdown()
+func (txmgr *LockBasedTxMgr) Commit() error
+func (txmgr *LockBasedTxMgr) Rollback()
+func (txmgr *LockBasedTxMgr) ShouldRecover(lastAvailableBlock uint64) (bool, uint64, error)
+func (txmgr *LockBasedTxMgr) CommitLostBlock(block *common.Block) error
+//代码在core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/lockbased_txmgr.go
+```
+
+### 8.3、lockBasedQueryExecutor结构体及方法（实现ledger.QueryExecutor接口）
+
+```go
+type lockBasedQueryExecutor struct {
+	helper *queryHelper
+	id     string
+}
+
+func newQueryExecutor(txmgr *LockBasedTxMgr) *lockBasedQueryExecutor 
+func (q *lockBasedQueryExecutor) GetState(ns string, key string) ([]byte, error)
+func (q *lockBasedQueryExecutor) GetStateMultipleKeys(namespace string, keys []string) ([][]byte, error)
+func (q *lockBasedQueryExecutor) GetStateRangeScanIterator(namespace string, startKey string, endKey string) (ledger.ResultsIterator, error)
+func (q *lockBasedQueryExecutor) ExecuteQuery(namespace, query string) (ledger.ResultsIterator, error)
+func (q *lockBasedQueryExecutor) Done()
+//代码在core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/lockbased_query_executer.go
+```
+
+### 8.4、queryHelper结构体及方法
+
+queryHelper结构体及方法：
+
+```go
+type queryHelper struct {
+	txmgr        *LockBasedTxMgr //LockBasedTxMgr
+	rwsetBuilder *rwsetutil.RWSetBuilder //读写集工具
+	itrs         []*resultsItr
+	err          error
+	doneInvoked  bool //是否调用完成
+}
+
+func (h *queryHelper) getState(ns string, key string) ([]byte, error)
+func (h *queryHelper) getStateMultipleKeys(namespace string, keys []string) ([][]byte, error)
+func (h *queryHelper) getStateRangeScanIterator(namespace string, startKey string, endKey string) (commonledger.ResultsIterator, error)
+func (h *queryHelper) executeQuery(namespace, query string) (commonledger.ResultsIterator, error)
+func (h *queryHelper) done()
+func (h *queryHelper) checkDone()
+//代码在core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/helper.go
+```
+
+resultsItr结构体及方法：
+
+```go
+type resultsItr struct {
+	ns                      string
+	endKey                  string
+	dbItr                   statedb.ResultsIterator
+	rwSetBuilder            *rwsetutil.RWSetBuilder
+	rangeQueryInfo          *kvrwset.RangeQueryInfo
+	rangeQueryResultsHelper *rwsetutil.RangeQueryResultsHelper
+}
+
+func newResultsItr(ns string, startKey string, endKey string, db statedb.VersionedDB, rwsetBuilder *rwsetutil.RWSetBuilder, enableHashing bool, maxDegree uint32) (*resultsItr, error)
+func (itr *resultsItr) Next() (commonledger.QueryResult, error)
+func (itr *resultsItr) updateRangeQueryInfo(queryResult statedb.QueryResult)
+func (itr *resultsItr) Close()
+//代码在core/ledger/kvledger/txmgmt/txmgr/lockbasedtxmgr/helper.go
+```
