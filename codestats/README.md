@@ -1,15 +1,15 @@
 # Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计
 
 排除test（测试）、vendor（依赖）、mocks（模拟）、examples（范例）外，go核心代码文件392，核心代码量76230行。
-```go
+```bash
 find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$' | wc -l
 392
 wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
-  76230 total
+76230 total
 ```
 
 详情如下：
-
+```bash
      65 ./bccsp/aesopts.go
     144 ./bccsp/bccsp.go
      49 ./bccsp/ecdsaopts.go
@@ -403,3 +403,4 @@ wc -l `find ./ |grep -vE 'test|vendor|mocks|examples' | grep '\.go$'`
     537 ./protos/utils/proputils.go
     454 ./protos/utils/txutils.go
   76230 total
+```
