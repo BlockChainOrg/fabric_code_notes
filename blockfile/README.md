@@ -21,6 +21,8 @@ blockfile，相关代码集中在common/ledger/blkstorage/fsblkstorage目录，�
 
 ### 2.1、Block相关结构体
 
+![](Block.png)
+
 Block结构体：
 
 ```go
