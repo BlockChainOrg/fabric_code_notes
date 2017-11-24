@@ -131,8 +131,7 @@ grpcServer, err := comm.NewGRPCServerFromListener(lis, secureConfig) //从Listen
 ehServer := producer.NewEventsServer(
 	uint(viper.GetInt("peer.events.buffersize")), //最大进行缓冲的消息数
 	viper.GetDuration("peer.events.timeout")) //缓冲已满的情况下，往缓冲中发送消息的超时
-pb.RegisterEventsServer(grpcServer.Server(), ehServer)
+pb.RegisterEventsServer(grpcServer.Server(), ehServer) //EventHubServer注册至grpcServer
 return grpcServer, nil
 //代码在peer/node/start.go
 ```
-
