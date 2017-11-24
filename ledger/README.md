@@ -212,7 +212,7 @@ func panicOnErr(err error, mgsFormat string, args ...interface{}) //panicOnErr
 //代码在core/ledger/kvledger/kv_ledger_provider.go
 ```
 
-6、ledgermgmt（Ledger管理函数）
+## 6、ledgermgmt（Ledger管理函数）
 
 全局变量：
 
