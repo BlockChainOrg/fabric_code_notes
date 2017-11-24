@@ -49,8 +49,4 @@ var nodeStartCmd = &cobra.Command{
 
 
 
-## 10、本文使用到的网络内容
-
-* [fabric源码分析5–kvledger的初始化](http://blog.csdn.net/idsuf698987/article/details/75388868)
-
 

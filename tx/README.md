@@ -268,7 +268,9 @@ type Validator struct {
 ```go
 //构造Validator
 func NewValidator(db statedb.VersionedDB) *Validator
+//验证背书交易
 func (v *Validator) validateEndorserTX(envBytes []byte, doMVCCValidation bool, updates *statedb.UpdateBatch) (*rwsetutil.TxRwSet, peer.TxValidationCode, error)
+//验证和准备批处理，Block中写集加入批处理
 func (v *Validator) ValidateAndPrepareBatch(block *common.Block, doMVCCValidation bool) (*statedb.UpdateBatch, error)
 func addWriteSetToBatch(txRWSet *rwsetutil.TxRwSet, txHeight *version.Height, batch *statedb.UpdateBatch)
 func (v *Validator) validateTx(txRWSet *rwsetutil.TxRwSet, updates *statedb.UpdateBatch) (peer.TxValidationCode, error)
@@ -278,6 +280,46 @@ func (v *Validator) validateRangeQueries(ns string, rangeQueriesInfo []*kvrwset.
 func (v *Validator) validateRangeQuery(ns string, rangeQueryInfo *kvrwset.RangeQueryInfo, updates *statedb.UpdateBatch) (bool, error)
 //代码在core/ledger/kvledger/txmgmt/validator/statebasedval/state_based_validator.go
 ```
+
+func (v *Validator) ValidateAndPrepareBatch(block *common.Block, doMVCCValidation bool) (*statedb.UpdateBatch, error)代码如下：
+
+```go
+updates := statedb.NewUpdateBatch() //构造批处理
+//type TxValidationFlags []uint8
+txsFilter := util.TxValidationFlags(block.Metadata.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])
+if len(txsFilter) == 0 {
+	txsFilter = util.NewTxValidationFlags(len(block.Data.Data))
+	block.Metadata.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER] = txsFilter
+}
+
+for txIndex, envBytes := range block.Data.Data {
+	if txsFilter.IsInvalid(txIndex) { //验证交易是否有效
+		continue
+	}
+	env, err := putils.GetEnvelopeFromBlock(envBytes) //Envelope
+	payload, err := putils.GetPayload(env) //Payload
+	chdr, err := putils.UnmarshalChannelHeader(payload.Header.ChannelHeader) //ChannelHeader
+	txType := common.HeaderType(chdr.Type) //HeaderType
+
+	if txType != common.HeaderType_ENDORSER_TRANSACTION {
+			continue
+	}
+	//验证背书交易，获取读写集
+	txRWSet, txResult, err := v.validateEndorserTX(envBytes, doMVCCValidation, updates)
+	txsFilter.SetFlag(txIndex, txResult)
+	if txRWSet != nil {
+		committingTxHeight := version.NewHeight(block.Header.Number, uint64(txIndex))
+		//读写集中写集加入批处理
+		addWriteSetToBatch(txRWSet, committingTxHeight, updates)
+		txsFilter.SetFlag(txIndex, peer.TxValidationCode_VALID)
+	}
+}
+block.Metadata.Metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER] = txsFilter
+return updates, nil
+
+//代码在core/ledger/kvledger/txmgmt/validator/statebasedval/state_based_validator.go
+```
+
 
 ## 8、TxMgr接口及实现（交易管理）
 
@@ -324,8 +366,10 @@ func (txmgr *LockBasedTxMgr) GetLastSavepoint() (*version.Height, error)
 //调取newQueryExecutor(txmgr)
 func (txmgr *LockBasedTxMgr) NewQueryExecutor() (ledger.QueryExecutor, error)
 func (txmgr *LockBasedTxMgr) NewTxSimulator() (ledger.TxSimulator, error)
+//验证Block，并从Block中获取写集加入批处理txmgr.batch
 func (txmgr *LockBasedTxMgr) ValidateAndPrepare(block *common.Block, doMVCCValidation bool) error
 func (txmgr *LockBasedTxMgr) Shutdown()
+//执行txmgr.batch，
 func (txmgr *LockBasedTxMgr) Commit() error
 func (txmgr *LockBasedTxMgr) Rollback()
 func (txmgr *LockBasedTxMgr) ShouldRecover(lastAvailableBlock uint64) (bool, uint64, error)

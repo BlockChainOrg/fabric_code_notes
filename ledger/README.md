@@ -138,21 +138,34 @@ type kvLedger struct {
 ```go
 //构造kvLedger
 func newKVLedger(ledgerID string, blockStore blkstorage.BlockStore,versionedDB statedb.VersionedDB, historyDB historydb.HistoryDB) (*kvLedger, error)
+//按最后一个有效块恢复statedb和historydb
 func (l *kvLedger) recoverDBs() error
+//检索指定范围内的块, 并将写入集提交给状态 db 或历史数据库, 或同时
 func (l *kvLedger) recommitLostBlocks(firstBlockNum uint64, lastBlockNum uint64, recoverables ...recoverable) error
+//按交易ID获取交易
 func (l *kvLedger) GetTransactionByID(txID string) (*peer.ProcessedTransaction, error)
+//获取BlockchainInfo
 func (l *kvLedger) GetBlockchainInfo() (*common.BlockchainInfo, error)
+//按区块编号获取块
 func (l *kvLedger) GetBlockByNumber(blockNumber uint64) (*common.Block, error)
+//按起始块获取块迭代器
 func (l *kvLedger) GetBlocksIterator(startBlockNumber uint64) (commonledger.ResultsIterator, error)
+//获取块哈希
 func (l *kvLedger) GetBlockByHash(blockHash []byte) (*common.Block, error)
+//按交易ID获取块
 func (l *kvLedger) GetBlockByTxID(txID string) (*common.Block, error)
+//按交易ID获取交易验证代码
 func (l *kvLedger) GetTxValidationCodeByTxID(txID string) (peer.TxValidationCode, error)
-func (l *kvLedger) Prune(policy commonledger.PrunePolicy) error
+func (l *kvLedger) Prune(policy commonledger.PrunePolicy) error //暂未实现
+//创建交易模拟器
 func (l *kvLedger) NewTxSimulator() (ledger.TxSimulator, error)
+//创建查询执行器
 func (l *kvLedger) NewQueryExecutor() (ledger.QueryExecutor, error)
 func (l *kvLedger) NewHistoryQueryExecutor() (ledger.HistoryQueryExecutor, error)
+//提交有效块，块写入blkstorage，块中写集加入批处理并更新statedb，写集本身入historyDB
 func (l *kvLedger) Commit(block *common.Block) error
-func (l *kvLedger) Close()
+//创建历史记录查询执行器
+func (l *kvLedger) Close() //关闭
 //代码在core/ledger/kvledger/kv_ledger.go
 ```
 
@@ -180,15 +193,62 @@ type Provider struct {
 ```go
 //分别构造idStore、blockStoreProvider、vdbProvider和historydbProvider，并用于构造Provider，并恢复之前未完成创建的Ledger
 func NewProvider() (ledger.PeerLedgerProvider, error)
+//按创世区块创建并打开Ledger，提交创世区块（块入blkstorage，写集更新statedb，写集本身写入historydb），创建ledgerID
 func (provider *Provider) Create(genesisBlock *common.Block) (ledger.PeerLedger, error)
+//调用provider.openInternal(ledgerID)，打开Ledger
 func (provider *Provider) Open(ledgerID string) (ledger.PeerLedger, error)
+//按ledgerID打开blkstorage、statedb和historydb，并创建kvledger
 func (provider *Provider) openInternal(ledgerID string) (ledger.PeerLedger, error)
+//ledgerID是否存在
 func (provider *Provider) Exists(ledgerID string) (bool, error)
+//获取ledgerID列表，调取provider.idStore.getAllLedgerIds()
 func (provider *Provider) List() ([]string, error)
+//关闭idStore、blkstorage、statedb、historydb
 func (provider *Provider) Close()
 //检查是否有之前未完成创建的Ledger，并恢复
 func (provider *Provider) recoverUnderConstructionLedger()
 func (provider *Provider) runCleanup(ledgerID string) error //暂时没有实现
 func panicOnErr(err error, mgsFormat string, args ...interface{}) //panicOnErr
 //代码在core/ledger/kvledger/kv_ledger_provider.go
+```
+
+6、ledgermgmt（Ledger管理函数）
+
+全局变量：
+
+```go
+var openedLedgers map[string]ledger.PeerLedger //Ledger map，Key为ChainID（即ChannelId或LedgerId）
+var ledgerProvider ledger.PeerLedgerProvider //LedgerProvider
+//代码在core/ledger/ledgermgmt/ledger_mgmt.go
+```
+
+Ledger管理函数：
+
+```go
+func Initialize() //Ledger初始化，调用initialize()，once.Do确保仅调用一次
+func initialize() //Ledger初始化，包括初始化openedLedgers及ledgerProvider
+//调用ledgerProvider.Create(genesisBlock)创建Ledger，并加入openedLedgers
+func CreateLedger(genesisBlock *common.Block) (ledger.PeerLedger, error) 
+//按id取Ledger，并调用ledgerProvider.Open(id)打开Ledger
+func OpenLedger(id string) (ledger.PeerLedger, error) 
+//获取ledgerID列表，调取ledgerProvider.List()
+func GetLedgerIDs() ([]string, error)
+//关闭ledgerProvider
+func Close()
+//构造closableLedger
+func wrapLedger(id string, l ledger.PeerLedger) ledger.PeerLedger
+//代码在core/ledger/ledgermgmt/ledger_mgmt.go
+```
+
+closableLedger：
+
+```go
+type closableLedger struct {
+	id string
+	ledger.PeerLedger
+}
+
+func (l *closableLedger) Close() //调取l.closeWithoutLock()
+func (l *closableLedger) closeWithoutLock() //delete(openedLedgers, l.id)
+//代码在core/ledger/ledgermgmt/ledger_mgmt.go
 ```

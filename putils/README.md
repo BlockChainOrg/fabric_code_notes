@@ -11,7 +11,7 @@ putils，即protos/utils工具包，代码分布在：protos/utils目录下。
 //TransactionAction.Payload => ChaincodeActionPayload
 //ChaincodeActionPayload.Action.ProposalResponsePayload => ProposalResponsePayload
 //ProposalResponsePayload.Extension => ChaincodeAction
-//返回ChaincodeActionPayload和ChaincodeAction
+//从TransactionAction中获取ChaincodeActionPayload和ChaincodeAction
 func GetPayloads(txActions *peer.TransactionAction) (*peer.ChaincodeActionPayload, *peer.ChaincodeAction, error)
 //[]byte反序列化为Envelope
 func GetEnvelopeFromBlock(data []byte) (*common.Envelope, error)
@@ -66,6 +66,7 @@ func GetBytesSignatureHeader(hdr *common.SignatureHeader) ([]byte, error)
 func GetBytesTransaction(tx *peer.Transaction) ([]byte, error)
 func GetBytesPayload(payl *common.Payload) ([]byte, error)
 func GetBytesEnvelope(env *common.Envelope) ([]byte, error)
+//从envBytes []byte中获取ChaincodeAction
 func GetActionFromEnvelope(envBytes []byte) (*peer.ChaincodeAction, error)
 func CreateProposalFromCIS(typ common.HeaderType, chainID string, cis *peer.ChaincodeInvocationSpec, creator []byte) (*peer.Proposal, string, error)
 func CreateInstallProposalFromCDS(ccpack proto.Message, creator []byte) (*peer.Proposal, string, error)
@@ -111,14 +112,23 @@ func IsConfigBlock(block *cb.Block) bool
 ## 5、blockutils
 
 ```go
+//[]byte转换为Block，从Block中获取ChainID（即ChannelId）
 func GetChainIDFromBlockBytes(bytes []byte) (string, error)
+//从Block中获取ChainID（即ChannelId）
 func GetChainIDFromBlock(block *cb.Block) (string, error)
+//从Block中按index获取Metadata
 func GetMetadataFromBlock(block *cb.Block, index cb.BlockMetadataIndex) (*cb.Metadata, error)
+//从Block中按index获取Metadata，如果失败则Panic
 func GetMetadataFromBlockOrPanic(block *cb.Block, index cb.BlockMetadataIndex) *cb.Metadata
+//从Block.Metadata.Metadata中获取LastConfig
 func GetLastConfigIndexFromBlock(block *cb.Block) (uint64, error)
+//从Block.Metadata.Metadata中获取LastConfig，如果失败则Panic
 func GetLastConfigIndexFromBlockOrPanic(block *cb.Block) uint64
+//[]byte转换为Block
 func GetBlockFromBlockBytes(blockBytes []byte) (*cb.Block, error)
+//拷贝Block.Metadata
 func CopyBlockMetadata(src *cb.Block, dst *cb.Block)
+//初始化Block.Metadata.Metadata
 func InitBlockMetadata(block *cb.Block)
 //代码在protos/utils/blockutils.go
 ```
