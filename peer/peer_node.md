@@ -135,3 +135,14 @@ pb.RegisterEventsServer(grpcServer.Server(), ehServer) //EventHubServer注册至
 return grpcServer, nil
 //代码在peer/node/start.go
 ```
+
+pb.RegisterEventsServer(grpcServer.Server(), ehServer)代码如下：
+
+```go
+func RegisterEventsServer(s *grpc.Server, srv EventsServer) {
+	s.RegisterService(&_Events_serviceDesc, srv) 
+}
+//代码在protos/peer/events.pb.go
+```
+
+events（事件服务）更详细内容，参考：[Fabric 1.0源代码笔记 之 events（事件服务）](../events/README.md)
