@@ -16,6 +16,8 @@ Tx代码分布目录结构如下：
 
 ## 2、交易的封装Envelope结构体
 
+![](Envelope.png)
+
 ### 2.1、Envelope结构体
 
 Envelope直译为信封，封装Payload和Signature。
