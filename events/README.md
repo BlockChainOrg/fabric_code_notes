@@ -165,3 +165,5 @@ SignedEvent struct {
 ```
 
 ## 3、consumer（消费者）
+
+待补充。
