@@ -2,7 +2,7 @@
 
 ## 1、概述
 
-除test、vendor、mocks、example、protos外，go核心代码文件341个，核心代码行64152行。
+除test、vendor、mocks、example、protos外，go核心代码文件341个，核心代码行63433行。
 
 ```bash
 find ./ |grep -vE 'test|vendor|mocks|example|protos' | grep '\.go$' | wc -l
