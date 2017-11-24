@@ -19,8 +19,8 @@
 	* [（3）statedb（状态数据库）](ledger/statedb.md)
 	* [（4）historydb（历史数据库）](ledger/historydb.md)
 ------
-* [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](ecdsa/README.md)
-* [Fabric 1.0源代码笔记 之 附录-简称表](abbreviation/README.md)
-* [Fabric 1.0源代码笔记 之 附录-Fabric使用的第三方包](third_party_packages/README.md)
-* [Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计](codestats/README.md)
+* [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](annex/ecdsa.md)
+* [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)
+* [Fabric 1.0源代码笔记 之 附录-Fabric使用的第三方包](annex/third_party_packages.md)
+* [Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计](annex/codestats.md)
 
