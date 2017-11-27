@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Peer（2）peer node命令实现
+# Fabric 1.0源代码笔记 之 Peer（2）peer node start命令实现
 
 ![](../peer/peer_node_start.png)
 
