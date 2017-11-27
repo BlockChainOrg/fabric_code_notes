@@ -106,7 +106,7 @@ func NewProvider() (ledger.PeerLedgerProvider, error) {
 
 Ledger更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（账本）](../ledger/README.md)
 
-### 3、配置及启动PeerServer、启动EventHubServer（事件中心服务器）
+## 3、配置及启动PeerServer、启动EventHubServer（事件中心服务器）
 
 ```go
 //初始化全局变量localAddress和peerEndpoint
@@ -146,3 +146,223 @@ func RegisterEventsServer(s *grpc.Server, srv EventsServer) {
 ```
 
 events（事件服务）更详细内容，参考：[Fabric 1.0源代码笔记 之 events（事件服务）](../events/README.md)
+
+## 4、创建并启动Chaincode Server，并注册系统链码
+
+代码如下：
+
+```go
+ccprovider.EnableCCInfoCache() //ccInfoCacheEnabled = true
+//创建Chaincode Server
+//如果peer.chaincodeListenAddress，没有定义或者定义和peerListenAddress相同，均直接使用peerServer
+//否则另行创建NewGRPCServer用于Chaincode Server
+ccSrv, ccEpFunc := createChaincodeServer(peerServer, listenAddr)
+//Chaincode service注册到grpcServer，并注册系统链码
+registerChaincodeSupport(ccSrv.Server(), ccEpFunc)
+go ccSrv.Start() //启动grpcServer
+//代码在peer/node/start.go
+```
+
+ccSrv, ccEpFunc := createChaincodeServer(peerServer, listenAddr)代码如下：创建Chaincode Server。
+
+```go
+func createChaincodeServer(peerServer comm.GRPCServer, peerListenAddress string) (comm.GRPCServer, ccEndpointFunc) {
+	//peer.chaincodeListenAddress，链码容器连接时的监听地址
+	cclistenAddress := viper.GetString("peer.chaincodeListenAddress")
+
+	var srv comm.GRPCServer
+	var ccEpFunc ccEndpointFunc
+	
+	//如果peer.chaincodeListenAddress，没有定义或者定义和peerListenAddress相同，均直接使用peerServer
+	//否则另行创建NewGRPCServer用于Chaincode Server
+	if cclistenAddress == "" {
+		ccEpFunc = peer.GetPeerEndpoint
+		srv = peerServer
+	} else if cclistenAddress == peerListenAddress {
+		ccEpFunc = peer.GetPeerEndpoint
+		srv = peerServer
+	} else {
+		config, err := peer.GetSecureConfig()
+		srv, err = comm.NewGRPCServer(cclistenAddress, config)
+		ccEpFunc = getChaincodeAddressEndpoint
+	}
+
+	return srv, ccEpFunc
+}
+//代码在peer/node/start.go
+```
+
+registerChaincodeSupport(ccSrv.Server(), ccEpFunc)代码如下：Chaincode service注册到grpcServer。
+
+```go
+func registerChaincodeSupport(grpcServer *grpc.Server, ccEpFunc ccEndpointFunc) {
+	userRunsCC := chaincode.IsDevMode() //是否开发模式
+	ccStartupTimeout := viper.GetDuration("chaincode.startuptimeout") //启动链码容器的超时
+	if ccStartupTimeout < time.Duration(5)*time.Second { //至少5秒
+		ccStartupTimeout = time.Duration(5) * time.Second
+	} else {
+	}
+	//构造ChaincodeSupport
+	ccSrv := chaincode.NewChaincodeSupport(ccEpFunc, userRunsCC, ccStartupTimeout)
+	scc.RegisterSysCCs() //注册系统链码
+	pb.RegisterChaincodeSupportServer(grpcServer, ccSrv) //service注册到grpcServer
+}
+//代码在peer/node/start.go
+```
+
+ccSrv := chaincode.NewChaincodeSupport(ccEpFunc, userRunsCC, ccStartupTimeout)代码如下：构造ChaincodeSupport。
+
+```go
+var theChaincodeSupport *ChaincodeSupport
+
+func NewChaincodeSupport(getCCEndpoint func() (*pb.PeerEndpoint, error), userrunsCC bool, ccstartuptimeout time.Duration) *ChaincodeSupport {
+	//即/var/hyperledger/production/chaincodes
+	ccprovider.SetChaincodesPath(config.GetPath("peer.fileSystemPath") + string(filepath.Separator) + "chaincodes")
+
+	pnid := viper.GetString("peer.networkId") //网络ID
+	pid := viper.GetString("peer.id") //节点ID
+
+	//构造ChaincodeSupport
+	theChaincodeSupport = &ChaincodeSupport{runningChaincodes: &runningChaincodes{chaincodeMap: make(map[string]*chaincodeRTEnv), launchStarted: make(map[string]bool)}, peerNetworkID: 
+pnid, peerID: pid}
+
+	ccEndpoint, err := getCCEndpoint() //此处传入ccEpFunc
+	if err != nil {
+		theChaincodeSupport.peerAddress = viper.GetString("chaincode.peerAddress")
+	} else {
+		theChaincodeSupport.peerAddress = ccEndpoint.Address
+	}
+	if theChaincodeSupport.peerAddress == "" {
+		theChaincodeSupport.peerAddress = peerAddressDefault
+	}
+
+	theChaincodeSupport.userRunsCC = userrunsCC //是否开发模式
+	theChaincodeSupport.ccStartupTimeout = ccstartuptimeout //启动链码容器的超时
+
+	theChaincodeSupport.peerTLS = viper.GetBool("peer.tls.enabled") //是否启用TLS
+	if theChaincodeSupport.peerTLS {
+		theChaincodeSupport.peerTLSCertFile = config.GetPath("peer.tls.cert.file")
+		theChaincodeSupport.peerTLSKeyFile = config.GetPath("peer.tls.key.file")
+		theChaincodeSupport.peerTLSSvrHostOrd = viper.GetString("peer.tls.serverhostoverride")
+	}
+
+	kadef := 0
+	// Peer和链码之间的心跳超时，小于或等于0意味着关闭
+	if ka := viper.GetString("chaincode.keepalive"); ka == "" {
+		theChaincodeSupport.keepalive = time.Duration(kadef) * time.Second //0
+	} else {
+		t, terr := strconv.Atoi(ka)
+		if terr != nil {
+			t = kadef //0
+		} else if t <= 0 {
+			t = kadef //0
+		}
+		theChaincodeSupport.keepalive = time.Duration(t) * time.Second //非0
+	}
+
+	execto := time.Duration(30) * time.Second
+	//invoke和initialize命令执行超时
+	if eto := viper.GetDuration("chaincode.executetimeout"); eto <= time.Duration(1)*time.Second {
+		//小于1秒时，默认30秒
+	} else {
+		execto = eto
+	}
+	theChaincodeSupport.executetimeout = execto
+
+	viper.SetEnvPrefix("CORE")
+	viper.AutomaticEnv()
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+
+	theChaincodeSupport.chaincodeLogLevel = getLogLevelFromViper("level")
+	theChaincodeSupport.shimLogLevel = getLogLevelFromViper("shim")
+	theChaincodeSupport.logFormat = viper.GetString("chaincode.logging.format")
+
+	return theChaincodeSupport
+}
+
+//代码在core/chaincode/chaincode_support.go
+```
+
+scc.RegisterSysCCs()代码如下：注册系统链码。
+
+```go
+func RegisterSysCCs() {
+	//cscc、lscc、escc、vscc、qscc
+	for _, sysCC := range systemChaincodes {
+		RegisterSysCC(sysCC)
+	}
+}
+代码在core/scc/importsysccs.go
+```
+
+## 5、注册Admin server和Endorser server
+
+代码如下：
+
+```go
+//s.RegisterService(&_Admin_serviceDesc, srv)
+//var _Admin_serviceDesc = grpc.ServiceDesc{...}
+//core.NewAdminServer()构造ServerAdmin结构体，ServerAdmin结构体实现type AdminServer interface接口
+pb.RegisterAdminServer(peerServer.Server(), core.NewAdminServer())
+//构造结构体Endorser，Endorser结构体实现type EndorserServer interface接口
+serverEndorser := endorser.NewEndorserServer()
+//s.RegisterService(&_Endorser_serviceDesc, srv)
+//var _Endorser_serviceDesc = grpc.ServiceDesc{...}
+pb.RegisterEndorserServer(peerServer.Server(), serverEndorser)
+//代码在peer/node/start.go
+```
+
+附type AdminServer interface接口定义：
+
+```go
+type AdminServer interface {
+	GetStatus(context.Context, *google_protobuf.Empty) (*ServerStatus, error)
+	StartServer(context.Context, *google_protobuf.Empty) (*ServerStatus, error)
+	GetModuleLogLevel(context.Context, *LogLevelRequest) (*LogLevelResponse, error)
+	SetModuleLogLevel(context.Context, *LogLevelRequest) (*LogLevelResponse, error)
+	RevertLogLevels(context.Context, *google_protobuf.Empty) (*google_protobuf.Empty, error)
+}
+//代码在protos/peer/admin.pb.go
+```
+
+附type EndorserServer interface接口定义：
+
+```go
+type EndorserServer interface {
+	ProcessProposal(context.Context, *SignedProposal) (*ProposalResponse, error)
+}
+//代码在protos/peer/peer.pb.go
+```
+
+## 6、初始化Gossip服务
+
+```go
+bootstrap := viper.GetStringSlice("peer.gossip.bootstrap")
+serializedIdentity, err := mgmt.GetLocalSigningIdentityOrPanic().Serialize()
+messageCryptoService := peergossip.NewMCS(
+	peer.NewChannelPolicyManagerGetter(),
+	localmsp.NewSigner(),
+	mgmt.NewDeserializersManager())
+secAdv := peergossip.NewSecurityAdvisor(mgmt.NewDeserializersManager())
+
+secureDialOpts := func() []grpc.DialOption {
+	var dialOpts []grpc.DialOption
+	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(comm.MaxRecvMsgSize()),
+		grpc.MaxCallSendMsgSize(comm.MaxSendMsgSize())))
+	dialOpts = append(dialOpts, comm.ClientKeepaliveOptions()...)
+		
+	if comm.TLSEnabled() {
+	tlsCert := peerServer.ServerCertificate()
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(comm.GetCASupport().GetPeerCredentials(tlsCert)))
+	} else {
+		dialOpts = append(dialOpts, grpc.WithInsecure())
+	}
+	return dialOpts
+}
+
+err = service.InitGossipService(serializedIdentity, peerEndpoint.Address, peerServer.Server(),
+	messageCryptoService, secAdv, secureDialOpts, bootstrap...)
+defer service.GetGossipService().Stop()
+//代码在peer/node/start.go
+```
