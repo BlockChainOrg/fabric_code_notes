@@ -5,3 +5,6 @@
 * **ECDSA**：Elliptic Curve Digital Signature Algorithm，椭圆曲线数字签名算法。
 * **CA**：Certification Authority，证书颁发机构。
 * **TX**：Transaction，交易或事务。
+* **MCS**：Message Crypto Service，消息加密服务。
+* **PKI**：Public Key Infrastructure，公钥基础设施。
+* **SCC**：System Chaincode，系统链码。

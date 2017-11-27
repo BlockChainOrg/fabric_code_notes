@@ -97,6 +97,7 @@ func NewPeerClientConnection() (*grpc.ClientConn, error)
 func GetLocalIP() string
 func NewPeerClientConnectionWithAddress(peerAddress string) (*grpc.ClientConn, error)
 func GetChannelsInfo() []*pb.ChannelInfo
+//构造type channelPolicyManagerGetter struct{}
 func NewChannelPolicyManagerGetter() policies.ChannelPolicyManagerGetter
 func (c *channelPolicyManagerGetter) Manager(channelID string) (policies.Manager, bool)
 func CreatePeerServer(listenAddress string,secureConfig comm.SecureServerConfig) (comm.GRPCServer, error)

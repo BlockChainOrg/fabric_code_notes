@@ -340,20 +340,20 @@ type EndorserServer interface {
 ```go
 bootstrap := viper.GetStringSlice("peer.gossip.bootstrap") //启动节点后gossip连接的初始节点
 serializedIdentity, err := mgmt.GetLocalSigningIdentityOrPanic().Serialize() //获取签名身份
-messageCryptoService := peergossip.NewMCS(
-	peer.NewChannelPolicyManagerGetter(),
-	localmsp.NewSigner(),
-	mgmt.NewDeserializersManager())
-secAdv := peergossip.NewSecurityAdvisor(mgmt.NewDeserializersManager())
+messageCryptoService := peergossip.NewMCS( //构造mspMessageCryptoService（消息加密服务）
+	peer.NewChannelPolicyManagerGetter(), //构造type channelPolicyManagerGetter struct{}
+	localmsp.NewSigner(), //构造type mspSigner struct {}
+	mgmt.NewDeserializersManager()) //构造type mspDeserializersManager struct{}
+secAdv := peergossip.NewSecurityAdvisor(mgmt.NewDeserializersManager()) //构造mspSecurityAdvisor（安全顾问）
 
 secureDialOpts := func() []grpc.DialOption {
 	var dialOpts []grpc.DialOption
-	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(comm.MaxRecvMsgSize()),
-		grpc.MaxCallSendMsgSize(comm.MaxSendMsgSize())))
-	dialOpts = append(dialOpts, comm.ClientKeepaliveOptions()...)
+	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(comm.MaxRecvMsgSize()), //MaxRecvMsgSize
+		grpc.MaxCallSendMsgSize(comm.MaxSendMsgSize()))) //MaxSendMsgSize
+	dialOpts = append(dialOpts, comm.ClientKeepaliveOptions()...) //ClientKeepaliveOptions
 		
 	if comm.TLSEnabled() {
-	tlsCert := peerServer.ServerCertificate()
+		tlsCert := peerServer.ServerCertificate()
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(comm.GetCASupport().GetPeerCredentials(tlsCert)))
 	} else {
 		dialOpts = append(dialOpts, grpc.WithInsecure())
@@ -362,7 +362,23 @@ secureDialOpts := func() []grpc.DialOption {
 }
 
 err = service.InitGossipService(serializedIdentity, peerEndpoint.Address, peerServer.Server(),
-	messageCryptoService, secAdv, secureDialOpts, bootstrap...)
+	messageCryptoService, secAdv, secureDialOpts, bootstrap...) //构造gossipServiceImpl
 defer service.GetGossipService().Stop()
 //代码在peer/node/start.go
 ```
+
+Gossip更详细内容参考：[Fabric 1.0源代码笔记 之 gossip（流言算法）](../gossip/README.md)
+
+## 7、初始化、部署并执行系统链码（scc）
+
+代码如下：
+
+```go
+initSysCCs() //初始化系统链码，调用scc.DeploySysCCs("")
+peer.Initialize(func(cid string) { //初始化所有链
+	scc.DeploySysCCs(cid) //按chain id部署并运行系统链码
+})
+//代码在peer/node/start.go
+```
+
+scc更详细内容参考：[Fabric 1.0源代码笔记 之 scc（系统链码）](../scc/README.md)
