@@ -69,9 +69,6 @@ func (s *mspMessageCryptoService) getValidatedIdentity(peerIdentity api.PeerIden
 
 补充policies.ChannelPolicyManagerGetter：
 
-
-
-
 ## 20、本文使用的网络内容
 
 * [hyperledger fabric 代码分析之 gossip 协议](https://zhuanlan.zhihu.com/p/27989809)
