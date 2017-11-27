@@ -26,5 +26,6 @@
 * [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)
 * [Fabric 1.0源代码笔记 之 附录-Fabric使用的第三方包](annex/third_party_packages.md)
 * [Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计](annex/codestats.md)
-* [Fabric 1.0源代码笔记 之 附录-关键数据结构](annex/datastructure.md)
+* [Fabric 1.0源代码笔记 之 附录-关键数据结构（图）](annex/datastructure.md)
+* [Fabric 1.0源代码笔记 之 附录-关键流程图（图）](annex/flowchart.md)
 
