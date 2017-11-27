@@ -382,3 +382,49 @@ peer.Initialize(func(cid string) { //初始化所有链
 ```
 
 scc更详细内容参考：[Fabric 1.0源代码笔记 之 scc（系统链码）](../scc/README.md)
+
+## 8、启动peerServer和ehubGrpcServer，并监控系统信号，以及启动Go自带的profiling支持进行调试
+
+代码如下：
+
+```go
+serve := make(chan error)
+sigs := make(chan os.Signal, 1)
+signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+go func() {
+	sig := <-sigs //接收系统信号
+	serve <- nil
+}
+
+go func() {
+	var grpcErr error
+	grpcErr = peerServer.Start() //启动peerServer
+	serve <- grpcErr
+}
+
+err := writePid(config.GetPath("peer.fileSystemPath")+"/peer.pid", os.Getpid()) //写入pid
+
+go ehubGrpcServer.Start() //启动ehubGrpcServer
+
+if viper.GetBool("peer.profile.enabled") {
+	go func() { //启动Go自带的profiling支持进行调试
+		profileListenAddress := viper.GetString("peer.profile.listenAddress")
+		profileErr := http.ListenAndServe(profileListenAddress, nil)
+	}
+}
+
+return <-serve //等待serve
+//代码在peer/node/start.go
+```
+
+## 9、按配置文件重新更新模块日志级别
+
+```go
+overrideLogModules := []string{"msp", "gossip", "ledger", "cauthdsl", "policies", "grpc"}
+for _, module := range overrideLogModules {
+	err = common.SetLogLevelFromViper(module)
+}
+flogging.SetPeerStartupModulesMap()
+//代码在peer/node/start.go
+```

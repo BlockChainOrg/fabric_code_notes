@@ -80,7 +80,7 @@ func (cs *chainSupport) Ledger() ledger.PeerLedger
 func (cs *chainSupport) GetMSPIDs(cid string) []string
 func MockInitialize()
 func MockSetMSPIDGetter(mspIDGetter func(string) []string)
-func Initialize(init func(string))
+func Initialize(init func(string)) //Peer初始化，并部署系统链码
 func InitChain(cid string)
 func getCurrConfigBlockFromLedger(ledger ledger.PeerLedger) (*common.Block, error)
 func createChain(cid string, ledger ledger.PeerLedger, cb *common.Block) error
