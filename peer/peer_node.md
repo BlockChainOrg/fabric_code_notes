@@ -1,5 +1,7 @@
 # Fabric 1.0源代码笔记 之 Peer（2）peer node命令实现
 
+![](../peer/peer_node_start.png)
+
 ## 1、peer node加载子命令start和status
 
 peer node加载子命令start和status，代码如下：
@@ -106,7 +108,7 @@ func NewProvider() (ledger.PeerLedgerProvider, error) {
 
 Ledger更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（账本）](../ledger/README.md)
 
-## 3、配置及启动PeerServer、启动EventHubServer（事件中心服务器）
+## 3、配置及创建PeerServer、创建EventHubServer（事件中心服务器）
 
 ```go
 //初始化全局变量localAddress和peerEndpoint
@@ -114,9 +116,9 @@ err := peer.CacheConfiguration()
 peerEndpoint, err := peer.GetPeerEndpoint() //获取peerEndpoint
 listenAddr := viper.GetString("peer.listenAddress") //PeerServer监听地址
 secureConfig, err := peer.GetSecureConfig() //获取PeerServer安全配置，是否启用TLS、公钥、私钥、根证书
-//以监听地址和安全配置，启动Peer GRPC Server
+//以监听地址和安全配置，创建Peer GRPC Server
 peerServer, err := peer.CreatePeerServer(listenAddr, secureConfig)
-//启动EventHubServer（事件中心服务器）
+//创建EventHubServer（事件中心服务器）
 ehubGrpcServer, err := createEventHubServer(secureConfig)
 //代码在peer/node/start.go
 ```
