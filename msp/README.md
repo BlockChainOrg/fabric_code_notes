@@ -293,6 +293,7 @@ mgmt涉及方法如下：
 ```go
 func LoadLocalMsp(dir string, bccspConfig *factory.FactoryOpts, mspID string) error //从指定目录加载本地MSP
 func GetLocalMSP() msp.MSP //调取msp.NewBccspMsp()创建bccspmsp实例
+func GetLocalSigningIdentityOrPanic() msp.SigningIdentity //GetLocalMSP().GetDefaultSigningIdentity()
 //代码在msp/mgmt/mgmt.go
 ```
 

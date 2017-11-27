@@ -338,8 +338,8 @@ type EndorserServer interface {
 ## 6、初始化Gossip服务
 
 ```go
-bootstrap := viper.GetStringSlice("peer.gossip.bootstrap")
-serializedIdentity, err := mgmt.GetLocalSigningIdentityOrPanic().Serialize()
+bootstrap := viper.GetStringSlice("peer.gossip.bootstrap") //启动节点后gossip连接的初始节点
+serializedIdentity, err := mgmt.GetLocalSigningIdentityOrPanic().Serialize() //获取签名身份
 messageCryptoService := peergossip.NewMCS(
 	peer.NewChannelPolicyManagerGetter(),
 	localmsp.NewSigner(),
