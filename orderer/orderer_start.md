@@ -69,6 +69,7 @@ func Load() *TopLevel {
 	var uconf TopLevel
 	//将配置文件内容输出到结构体中
 	err = viperutil.EnhancedExactUnmarshal(config, &uconf)
+	//完成初始化，即检查空项，并赋默认值
 	uconf.completeInitialization(filepath.Dir(config.ConfigFileUsed()))
 
 	return &uconf
