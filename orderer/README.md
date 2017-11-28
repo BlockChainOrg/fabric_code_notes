@@ -15,6 +15,8 @@ Orderer代码分布在orderer目录，目录结构如下：
 		* file目录，账本区块文件存储。
 		* json目录，账本区块json文件存储。
 		* ram目录，账本区块内存存储。
+	* common目录，通用代码。
+		* bootstrap目录，初始区块的提供方式。
 	
 如下为分节说明Orderer代码：
 	

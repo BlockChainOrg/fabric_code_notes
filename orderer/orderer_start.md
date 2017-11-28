@@ -1,5 +1,7 @@
 # Fabric 1.0源代码笔记 之 Orderer（1）orderer start命令实现
 
+![](orderer_start.png)
+
 ## 1、加载命令行工具并解析命令行参数
 
 orderer的命令行工具，基于gopkg.in/alecthomas/kingpin.v2实现，地址：http://gopkg.in/alecthomas/kingpin.v2。
@@ -181,17 +183,62 @@ initializeMultiChainManager(conf, signer)代码如下：
 
 ```go
 func initializeMultiChainManager(conf *config.TopLevel, signer crypto.LocalSigner) multichain.Manager {
-	lf, _ := createLedgerFactory(conf)
+	lf, _ := createLedgerFactory(conf) //创建LedgerFactory
 	if len(lf.ChainIDs()) == 0 { //链不存在
-		initializeBootstrapChannel(conf, lf)
+		initializeBootstrapChannel(conf, lf) //初始化引导通道（获取初始区块、创建链、添加初始区块）
 	} else {
 		//链已存在
 	}
 
-	consenters := make(map[string]multichain.Consenter)
+	consenters := make(map[string]multichain.Consenter) //共识
 	consenters["solo"] = solo.New()
 	consenters["kafka"] = kafka.New(conf.Kafka.TLS, conf.Kafka.Retry, conf.Kafka.Version)
-	return multichain.NewManagerImpl(lf, consenters, signer)
+	return multichain.NewManagerImpl(lf, consenters, signer) //LedgerFactory、Consenter、签名
 }
 //代码在orderer/main.go
+```
+
+initializeBootstrapChannel(conf, lf)代码如下：
+
+```go
+func initializeBootstrapChannel(conf *config.TopLevel, lf ledger.Factory) {
+	var genesisBlock *cb.Block
+	switch conf.General.GenesisMethod { //初始区块的提供方式
+	case "provisional": //根据GenesisProfile提供
+		genesisBlock = provisional.New(genesisconfig.Load(conf.General.GenesisProfile)).GenesisBlock()
+	case "file": //指定现成的初始区块文件
+		genesisBlock = file.New(conf.General.GenesisFile).GenesisBlock()
+	default:
+		logger.Panic("Unknown genesis method:", conf.General.GenesisMethod)
+	}
+	chainID, err := utils.GetChainIDFromBlock(genesisBlock) //获取ChainID
+	gl, err := lf.GetOrCreate(chainID) //获取或创建chain
+	err = gl.Append(genesisBlock) //追加初始区块
+}
+//代码在orderer/main.go
+```
+
+8、注册orderer service并启动grpcServer
+
+```go
+server := NewServer(manager, signer) //构造server
+ab.RegisterAtomicBroadcastServer(grpcServer.Server(), server) //service注册到grpcServer
+grpcServer.Start()
+//代码在orderer/main.go
+```
+
+server := NewServer(manager, signer)代码如下：
+
+```go
+func NewServer(ml multichain.Manager, signer crypto.LocalSigner) ab.AtomicBroadcastServer {
+	s := &server{
+		dh: deliver.NewHandlerImpl(deliverSupport{Manager: ml}),
+		bh: broadcast.NewHandlerImpl(broadcastSupport{
+			Manager:               ml,
+			ConfigUpdateProcessor: configupdate.New(ml.SystemChannelID(), configUpdateSupport{Manager: ml}, signer),
+		}),
+	}
+	return s
+}
+//代码在orderer/server.go
 ```
