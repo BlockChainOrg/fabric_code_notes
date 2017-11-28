@@ -5,6 +5,7 @@
 * [Fabric 1.0源代码笔记 之 Peer](peer/README.md)
 	* [（1）peer根命令入口及加载子命令](peer/peer_main.md)
 	* [（2）peer node start命令实现](peer/peer_node_start.md)
+	* [（3）peer channel命令及子命令实现](peer/peer_channel.md)
 * [Fabric 1.0源代码笔记 之 Orderer](orderer/README.md)
 	* [（1）orderer start命令实现](orderer/orderer_start.md)
 	* [（2）localconfig（Orderer配置文件定义）](orderer/localconfig.md)
