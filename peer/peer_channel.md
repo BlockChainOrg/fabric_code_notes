@@ -111,7 +111,7 @@ cf, err = InitCmdFactory(EndorserRequired, OrdererNotRequired)
 //代码在peer/channel/join.go
 ```
 
-### 2.2、生成ChaincodeInvocationSpec消息（cscc.JoinChain）
+### 2.2、构造ChaincodeInvocationSpec消息（cscc.JoinChain）
 
 ```go
 spec, err := getJoinCCSpec()
@@ -135,7 +135,7 @@ func getJoinCCSpec() (*pb.ChaincodeSpec, error) {
 //代码在peer/channel/join.go
 ```
 
-### 2.3、创建Proposal并签名
+### 2.3、创建cscc Proposal并签名
 
 ```go
 creator, err := cf.Signer.Serialize()
@@ -187,7 +187,7 @@ func CreateChaincodeProposalWithTxIDNonceAndTransient(txid string, typ common.He
 //代码在protos/utils/proputils.go
 ```
 
-### 2.3、提交并处理Proposal
+### 2.4、提交并处理Proposal
 
 ```go
 var proposalResp *pb.ProposalResponse

@@ -26,10 +26,26 @@ type endorserClient struct {
 	cc *grpc.ClientConn
 }
 
+func NewEndorserClient(cc *grpc.ClientConn) EndorserClient {
+	return &endorserClient{cc}
+}
+
 func (c *endorserClient) ProcessProposal(ctx context.Context, in *SignedProposal, opts ...grpc.CallOption) (*ProposalResponse, error) {
 	out := new(ProposalResponse)
 	err := grpc.Invoke(ctx, "/protos.Endorser/ProcessProposal", in, out, c.cc, opts...)
 	return out, nil
 }
 //代码在protos/peer/peer.pb.go
+```
+
+## 4、EndorserClient工具函数
+
+```go
+//获取Endorser客户端
+func GetEndorserClient() (pb.EndorserClient, error) {
+	clientConn, err := peer.NewPeerClientConnection()
+	endorserClient := pb.NewEndorserClient(clientConn)
+	return endorserClient, nil
+}
+//代码在peer/common/common.go
 ```
