@@ -8,7 +8,7 @@ peer chaincode install支持如下两种方式：
 * 指定代码方式，peer chaincode install -n <链码名称> -v <链码版本> -p <链码路径>
 * 基于链码打包文件方式，peer chaincode install <链码打包文件>
 
-![](../peer_chaincode_install.png)
+![](peer_chaincode_install.png)
 
 ### 1.1、初始化Endorser客户端
 
