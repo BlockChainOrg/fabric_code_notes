@@ -20,6 +20,8 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 	* clilogging目录，peer clilogging命令及子命令实现。
 	* version目录，peer version命令实现。
 	* common目录，peer相关通用代码。
+		* common.go，部分公共函数。
+		* ordererclient.go，BroadcastClient接口及实现。
 	* gossip目录，gossip最终一致性算法相关代码。
 * core/peer目录：
 	config.go，Peer配置相关工具函数。
@@ -30,6 +32,7 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 * [Fabric 1.0源代码笔记 之 Peer（1）peer根命令入口及加载子命令](peer_main.md)
 * [Fabric 1.0源代码笔记 之 Peer（2）peer node start命令实现](peer_node_start.md)
 * [Fabric 1.0源代码笔记 之 Peer（3）peer channel命令及子命令实现](peer_channel.md)
+* [Fabric 1.0源代码笔记 之 Peer（4）peer chaincode命令及子命令实现](peer_chaincode.md)
 
 ## 2、Peer配置相关工具函数
 

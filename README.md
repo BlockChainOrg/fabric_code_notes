@@ -6,6 +6,7 @@
 	* [（1）peer根命令入口及加载子命令](peer/peer_main.md)
 	* [（2）peer node start命令实现](peer/peer_node_start.md)
 	* [（3）peer channel命令及子命令实现](peer/peer_channel.md)
+	* [（4）peer chaincode命令及子命令实现](peer/peer_chaincode.md)
 * [Fabric 1.0源代码笔记 之 Orderer](orderer/README.md)
 	* [（1）orderer start命令实现](orderer/orderer_start.md)
 	* [（2）localconfig（Orderer配置文件定义）](orderer/localconfig.md)
@@ -26,6 +27,7 @@
 * [Fabric 1.0源代码笔记 之 events（事件服务）](events/README.md)
 * [Fabric 1.0源代码笔记 之 gossip（流言算法）](gossip/README.md)
 * [Fabric 1.0源代码笔记 之 scc（系统链码）](scc/README.md)
+* [Fabric 1.0源代码笔记 之 Proposal（提案）](proposal/README.md)
 ------
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](annex/ecdsa.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)
