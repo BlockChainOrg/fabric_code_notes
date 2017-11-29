@@ -8,3 +8,8 @@
 * **MCS**：Message Crypto Service，消息加密服务。
 * **PKI**：Public Key Infrastructure，公钥基础设施。
 * **SCC**：System Chaincode，系统链码。
+* **LSCC**：Lifecycle system chaincode，生命周期系统链码。
+* **CSCC**：Configuration system chaincode，通道配置系统链码。
+* **QSCC**：Query system chaincode，账本查询系统链码。
+* **ESCC**：Endorsement system chaincode，交易背书系统链码。
+* **VSCC**：Validation system chaincode，交易校验系统链码。
