@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Peer（5）EndorserClient（Endorser客户端）和
+# Fabric 1.0源代码笔记 之 Peer（5）EndorserClient（Endorser客户端）
 
 ## 1、EndorserClient概述
 

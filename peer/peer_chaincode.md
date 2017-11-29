@@ -4,6 +4,8 @@
 
 ### 1.0、peer chaincode install子命令概述
 
+peer chaincode install，将链码的源码和环境封装为一个链码安装打包文件，并传输到背书节点。
+
 peer chaincode install支持如下两种方式：
 * 指定代码方式，peer chaincode install -n <链码名称> -v <链码版本> -p <链码路径>
 * 基于链码打包文件方式，peer chaincode install <链码打包文件>
@@ -152,4 +154,33 @@ func createProposalFromCDS(chainID string, msg proto.Message, creator []byte, po
 ```go
 proposalResponse, err := cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
 //代码在peer/chaincode/install.go
+```
+
+## 2、peer chaincode instantiate子命令实现（实例化链码）
+
+### 2.0、peer chaincode instantiate概述
+
+peer chaincode instantiate命令通过构造生命周期管理系统链码（LSCC）的交易，将安装过的链码在指定通道上进行实例化调用。
+在peer上创建容器启动，并执行初始化操作。
+
+### 2.1、初始化EndorserClient、Signer、及BroadcastClient
+
+与2.1接近，附BroadcastClient初始化代码如下：
+
+```go
+cf, err = InitCmdFactory(true, true)
+//代码在peer/chaincode/instantiate.go
+```
+
+```go
+func InitCmdFactory(isEndorserRequired, isOrdererRequired bool) (*ChaincodeCmdFactory, error) {
+	//初始化EndorserClient、Signer，略，参考1.1
+	var broadcastClient common.BroadcastClient
+	if isOrdererRequired {
+		//flags.StringVarP(&orderingEndpoint, "orderer", "o", "", "Ordering service endpoint")
+		//orderingEndpoint为orderer服务地址
+		broadcastClient, err = common.GetBroadcastClientFnc(orderingEndpoint, tls, caFile)
+	}
+}
+//代码在peer/chaincode/common.go
 ```

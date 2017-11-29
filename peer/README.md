@@ -33,6 +33,8 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 * [Fabric 1.0源代码笔记 之 Peer（2）peer node start命令实现](peer_node_start.md)
 * [Fabric 1.0源代码笔记 之 Peer（3）peer channel命令及子命令实现](peer_channel.md)
 * [Fabric 1.0源代码笔记 之 Peer（4）peer chaincode命令及子命令实现](peer_chaincode.md)
+* [Fabric 1.0源代码笔记 之 Peer（5）EndorserClient（Endorser客户端）](EndorserClient.md)
+* [Fabric 1.0源代码笔记 之 Peer（6）BroadcastClient（Broadcast客户端）](BroadcastClient.md)
 
 ## 2、Peer配置相关工具函数
 
