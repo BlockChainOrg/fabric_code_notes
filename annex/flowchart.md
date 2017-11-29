@@ -7,3 +7,10 @@
 ## 2、orderer start流程图
 
 ![](../orderer/orderer_start.png)
+
+## 3、peer chaincode流程图
+
+### 3.1、peer chaincode install流程图
+
+![](../peer/peer_chaincode_install.png)
+
