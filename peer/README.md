@@ -24,8 +24,9 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 		* ordererclient.go，BroadcastClient接口及实现。
 	* gossip目录，gossip最终一致性算法相关代码。
 * core/peer目录：
-	config.go，Peer配置相关工具函数。
-	peer.go，Peer服务相关工具函数。
+	* config.go，Peer配置相关工具函数。
+	* peer.go，Peer服务相关工具函数。
+* core/endorser目录：背书服务端。
 	
 如下为分节说明Peer代码：
 
@@ -35,6 +36,7 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 * [Fabric 1.0源代码笔记 之 Peer（4）peer chaincode命令及子命令实现](peer_chaincode.md)
 * [Fabric 1.0源代码笔记 之 Peer（5）EndorserClient（Endorser客户端）](EndorserClient.md)
 * [Fabric 1.0源代码笔记 之 Peer（6）BroadcastClient（Broadcast客户端）](BroadcastClient.md)
+* [Fabric 1.0源代码笔记 之 Peer（7）EndorserServer（Endorser服务端）](EndorserServer.md)
 
 ## 2、Peer配置相关工具函数
 

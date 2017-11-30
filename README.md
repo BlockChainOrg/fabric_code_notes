@@ -9,6 +9,7 @@
 	* [（4）peer chaincode命令及子命令实现](peer/peer_chaincode.md)
 	* [（5）EndorserClient（Endorser客户端）](peer/EndorserClient.md)
 	* [（6）BroadcastClient（Broadcast客户端）](peer/BroadcastClient.md)
+	* [（7）EndorserServer（Endorser服务端）](peer/EndorserServer.md)
 * [Fabric 1.0源代码笔记 之 Orderer](orderer/README.md)
 	* [（1）orderer start命令实现](orderer/orderer_start.md)
 	* [（2）localconfig（Orderer配置文件定义）](orderer/localconfig.md)
