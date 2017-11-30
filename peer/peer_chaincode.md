@@ -158,12 +158,12 @@ proposalResponse, err := cf.EndorserClient.ProcessProposal(context.Background(),
 
 ## 2、peer chaincode instantiate子命令实现（实例化链码）
 
-![](peer_chaincode_instantiate.png)
-
 ### 2.0、peer chaincode instantiate概述
 
 peer chaincode instantiate命令通过构造生命周期管理系统链码（LSCC）的交易，将安装过的链码在指定通道上进行实例化调用。
 在peer上创建容器启动，并执行初始化操作。
+
+![](peer_chaincode_instantiate.png)
 
 ### 2.1、初始化EndorserClient、Signer、及BroadcastClient
 
@@ -280,3 +280,60 @@ common.Envelope更详细内容，参考：[Fabric 1.0源代码笔记 之 附录-
 err = cf.BroadcastClient.Send(env)
 //代码在peer/chaincode/instantiate.go
 ```
+
+## 3、peer chaincode invoke子命令实现（调用链码）
+
+### 3.0、peer chaincode invoke概述
+
+通过invoke命令可以调用运行中的链码的方法。
+![](peer_chaincode_invoke(query).png)
+
+### 3.1、初始化EndorserClient、Signer、及BroadcastClient
+
+参考本文1.1和2.1。
+
+```go
+cf, err = InitCmdFactory(true, true)
+//代码在peer/chaincode/invoke.go
+```
+
+### 3.2、构造ChaincodeInvocationSpec
+
+```go
+spec, err := getChaincodeSpec(cmd) //构造ChaincodeSpec
+invocation := &pb.ChaincodeInvocationSpec{ChaincodeSpec: spec} //构造ChaincodeInvocationSpec
+//代码在peer/chaincode/common.go
+```
+
+### 3.3、创建Chaincode Proposal并签名
+
+```go
+creator, err := signer.Serialize()
+var prop *pb.Proposal
+prop, _, err = putils.CreateProposalFromCIS(pcommon.HeaderType_ENDORSER_TRANSACTION, cID, invocation, creator)
+var signedProp *pb.SignedProposal
+signedProp, err = putils.GetSignedProposal(prop, signer) //Proposal签名
+//代码在peer/chaincode/common.go
+```
+
+### 3.4、提交并处理Proposal、获取Proposal响应
+
+```go
+var proposalResp *pb.ProposalResponse
+proposalResp, err = endorserClient.ProcessProposal(context.Background(), signedProp)
+//代码在peer/chaincode/common.go
+```
+
+### 3.5、创建签名交易Envelope并向orderer广播交易Envelope
+
+```go
+if invoke {
+	env, err := putils.CreateSignedTx(prop, signer, proposalResp) //创建签名交易
+	err = bc.Send(env) //广播交易
+}
+//代码在peer/chaincode/common.go
+```
+
+## 4、peer chaincode query子命令实现（查询链码）
+
+与3、peer chaincode invoke子命令实现（调用链码）基本相同，区别在于提交并处理Proposal后，不再创建交易以及广播交易。

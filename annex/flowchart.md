@@ -18,3 +18,6 @@
 
 ![](../peer/peer_chaincode_instantiate.png)
 
+### 3.3、peer chaincode invoke(query)流程图
+
+![](../peer/peer_chaincode_invoke(query).png)
