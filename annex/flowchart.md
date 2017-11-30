@@ -14,3 +14,7 @@
 
 ![](../peer/peer_chaincode_install.png)
 
+### 3.2、peer chaincode instantiate流程图
+
+![](../peer/peer_chaincode_instantiate.png)
+

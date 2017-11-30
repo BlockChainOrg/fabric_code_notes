@@ -158,6 +158,8 @@ proposalResponse, err := cf.EndorserClient.ProcessProposal(context.Background(),
 
 ## 2、peer chaincode instantiate子命令实现（实例化链码）
 
+![](peer_chaincode_instantiate.png)
+
 ### 2.0、peer chaincode instantiate概述
 
 peer chaincode instantiate命令通过构造生命周期管理系统链码（LSCC）的交易，将安装过的链码在指定通道上进行实例化调用。
@@ -213,7 +215,7 @@ signedProp, err = utils.GetSignedProposal(prop, cf.Signer) //签名提案
 ```go
 proposalResponse, err := cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
 if proposalResponse != nil {
-	env, err := utils.CreateSignedTx(prop, cf.Signer, proposalResponse) //创建签名交易Envelope
+	env, err := utils.CreateSignedTx(prop, cf.Signer, proposalResponse) //由Proposal创建签名交易Envelope
 	return env, nil
 }
 //代码在peer/chaincode/instantiate.go
@@ -223,106 +225,58 @@ env, err := utils.CreateSignedTx(prop, cf.Signer, proposalResponse)代码如下�
 
 ```go
 func CreateSignedTx(proposal *peer.Proposal, signer msp.SigningIdentity, resps ...*peer.ProposalResponse) (*common.Envelope, error) {
-	// the original header
-	hdr, err := GetHeader(proposal.Header)
-	if err != nil {
-		return nil, fmt.Errorf("Could not unmarshal the proposal header")
-	}
-
-	// the original payload
-	pPayl, err := GetChaincodeProposalPayload(proposal.Payload)
-	if err != nil {
-		return nil, fmt.Errorf("Could not unmarshal the proposal payload")
-	}
-
-	// check that the signer is the same that is referenced in the header
-	// TODO: maybe worth removing?
-	signerBytes, err := signer.Serialize()
-	if err != nil {
-		return nil, err
-	}
-
-	shdr, err := GetSignatureHeader(hdr.SignatureHeader)
-	if err != nil {
-		return nil, err
-	}
-
-	if bytes.Compare(signerBytes, shdr.Creator) != 0 {
+	hdr, err := GetHeader(proposal.Header) //反序列化为common.Header
+	pPayl, err := GetChaincodeProposalPayload(proposal.Payload) //反序列化为peer.ChaincodeProposalPayload
+	signerBytes, err := signer.Serialize() //signer序列化
+	shdr, err := GetSignatureHeader(hdr.SignatureHeader) //反序列化为common.SignatureHeader
+	if bytes.Compare(signerBytes, shdr.Creator) != 0 { //Proposal创建者需与当前签名者相同
 		return nil, fmt.Errorf("The signer needs to be the same as the one referenced in the header")
 	}
+	hdrExt, err := GetChaincodeHeaderExtension(hdr) //Header.ChannelHeader反序列化为peer.ChaincodeHeaderExtension
 
-	// get header extensions so we have the visibility field
-	hdrExt, err := GetChaincodeHeaderExtension(hdr)
-	if err != nil {
-		return nil, err
-	}
-
-	// ensure that all actions are bitwise equal and that they are successful
 	var a1 []byte
 	for n, r := range resps {
 		if n == 0 {
 			a1 = r.Payload
-			if r.Response.Status != 200 {
+			if r.Response.Status != 200 { //检查Response.Status是否为200
 				return nil, fmt.Errorf("Proposal response was not successful, error code %d, msg %s", r.Response.Status, r.Response.Message)
 			}
 			continue
 		}
-
-		if bytes.Compare(a1, r.Payload) != 0 {
+		if bytes.Compare(a1, r.Payload) != 0 { //检查所有ProposalResponse.Payload是否相同
 			return nil, fmt.Errorf("ProposalResponsePayloads do not match")
 		}
 	}
 
-	// fill endorsements
 	endorsements := make([]*peer.Endorsement, len(resps))
 	for n, r := range resps {
 		endorsements[n] = r.Endorsement
 	}
 
-	// create ChaincodeEndorsedAction
+	//如下为逐层构建common.Envelope
 	cea := &peer.ChaincodeEndorsedAction{ProposalResponsePayload: resps[0].Payload, Endorsements: endorsements}
-
-	// obtain the bytes of the proposal payload that will go to the transaction
 	propPayloadBytes, err := GetBytesProposalPayloadForTx(pPayl, hdrExt.PayloadVisibility)
-	if err != nil {
-		return nil, err
-	}
-
-	// serialize the chaincode action payload
 	cap := &peer.ChaincodeActionPayload{ChaincodeProposalPayload: propPayloadBytes, Action: cea}
 	capBytes, err := GetBytesChaincodeActionPayload(cap)
-	if err != nil {
-		return nil, err
-	}
-
-	// create a transaction
 	taa := &peer.TransactionAction{Header: hdr.SignatureHeader, Payload: capBytes}
 	taas := make([]*peer.TransactionAction, 1)
 	taas[0] = taa
 	tx := &peer.Transaction{Actions: taas}
-
-	// serialize the tx
 	txBytes, err := GetBytesTransaction(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	// create the payload
 	payl := &common.Payload{Header: hdr, Data: txBytes}
 	paylBytes, err := GetBytesPayload(payl)
-	if err != nil {
-		return nil, err
-	}
-
-	// sign the payload
 	sig, err := signer.Sign(paylBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	// here's the envelope
 	return &common.Envelope{Payload: paylBytes, Signature: sig}, nil
 }
 
 //代码在protos/utils/txutils.go
+```
+
+common.Envelope更详细内容，参考：[Fabric 1.0源代码笔记 之 附录-关键数据结构（图）](../annex/datastructure.md)
+
+### 2.5、向orderer广播交易Envelope
+
+```go
+err = cf.BroadcastClient.Send(env)
+//代码在peer/chaincode/instantiate.go
 ```

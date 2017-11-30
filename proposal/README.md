@@ -50,4 +50,38 @@ type ChaincodeProposalPayload struct {
 
 ChaincodeInvocationSpec更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码）](chaincode/README.md)
 
-	
+## 3、ProposalResponse结构体定义
+
+### 3.1、ProposalResponse定义
+
+```go
+type ProposalResponse struct {
+	Version int32
+	Timestamp *google_protobuf1.Timestamp
+	Response *Response //type Response struct，peer.Response{Status: 200, Message: "OK"}}
+	Payload []byte
+	Endorsement *Endorsement //type Endorsement struct
+}
+//代码在protos/peer/proposal_response.pb.go
+```
+
+### 3.2、Response定义
+
+```go
+type Response struct { //peer.Response{Status: 200, Message: "OK"}}
+	Status int32
+	Message string
+	Payload []byte
+}
+//代码在protos/peer/proposal_response.pb.go
+```
+
+### 3.3、Endorsement定义
+
+```go
+type Endorsement struct {
+	Endorser []byte //bccspmsp.signer
+	Signature []byte
+}
+//代码在protos/peer/proposal_response.pb.go
+```

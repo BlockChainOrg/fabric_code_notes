@@ -16,7 +16,7 @@ func GetPayloads(txActions *peer.TransactionAction) (*peer.ChaincodeActionPayloa
 //[]byte反序列化为Envelope
 func GetEnvelopeFromBlock(data []byte) (*common.Envelope, error)
 func CreateSignedEnvelope(txType common.HeaderType, channelID string, signer crypto.LocalSigner, dataMsg proto.Message, msgVersion int32, epoch uint64) (*common.Envelope, error) 
-//创建签名交易Envelope
+//由Proposal创建签名交易Envelope
 func CreateSignedTx(proposal *peer.Proposal, signer msp.SigningIdentity, resps ...*peer.ProposalResponse) (*common.Envelope, error) {
 func CreateProposalResponse(hdrbytes []byte, payl []byte, response *peer.Response, results []byte, events []byte, ccid *peer.ChaincodeID, visibility []byte, signingEndorser msp.SigningIdentity) (*peer.ProposalResponse, error)
 func CreateProposalResponseFailure(hdrbytes []byte, payl []byte, response *peer.Response, results []byte, events []byte, ccid *peer.ChaincodeID, visibility []byte) (*peer.ProposalResponse, error)
@@ -36,8 +36,10 @@ func GetProposalHash1(header *common.Header, ccPropPayl []byte, visibility []byt
 ```go
 func GetChaincodeInvocationSpec(prop *peer.Proposal) (*peer.ChaincodeInvocationSpec, error)
 func GetChaincodeProposalContext(prop *peer.Proposal) ([]byte, map[string][]byte, error)
+//反序列化为common.Header
 func GetHeader(bytes []byte) (*common.Header, error)
 func GetNonce(prop *peer.Proposal) ([]byte, error)
+//Header.ChannelHeader反序列化为peer.ChaincodeHeaderExtension
 func GetChaincodeHeaderExtension(hdr *common.Header) (*peer.ChaincodeHeaderExtension, error)
 func GetProposalResponse(prBytes []byte) (*peer.ProposalResponse, error)
 func GetChaincodeDeploymentSpec(code []byte) (*peer.ChaincodeDeploymentSpec, error)
@@ -51,7 +53,9 @@ func GetPayload(e *common.Envelope) (*common.Payload, error)
 //[]byte反序列化为Transaction
 func GetTransaction(txBytes []byte) (*peer.Transaction, error)
 func GetChaincodeActionPayload(capBytes []byte) (*peer.ChaincodeActionPayload, error)
+//反序列化为peer.ChaincodeProposalPayload
 func GetChaincodeProposalPayload(bytes []byte) (*peer.ChaincodeProposalPayload, error)
+//反序列化为common.SignatureHeader
 func GetSignatureHeader(bytes []byte) (*common.SignatureHeader, error)
 func CreateChaincodeProposal(typ common.HeaderType, chainID string, cis *peer.ChaincodeInvocationSpec, creator []byte) (*peer.Proposal, string, error)
 func CreateChaincodeProposalWithTransient(typ common.HeaderType, chainID string, cis *peer.ChaincodeInvocationSpec, creator []byte, transientMap map[string][]byte) (*peer.Proposal, string, error)
