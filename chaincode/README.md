@@ -5,7 +5,7 @@
 Chaincode，即链码或智能合约，代码分布在protos/peer目录和core/chaincode目录，目录结构如下：
 
 * protos/peer目录：
-	* chaincode.pb.go，ChaincodeDeploymentSpec结构体定义。
+	* chaincode.pb.go，ChaincodeDeploymentSpec、ChaincodeInvocationSpec结构体定义。
 * core/chaincode目录：
 	* platforms目录，链码的编写语言平台实现，如golang或java。
 		* platforms.go，Platform接口定义，及部分工具函数。
@@ -65,9 +65,19 @@ type ChaincodeInput struct { //链码的具体执行参数信息
 //代码在protos/peer/chaincode.pb.go
 ```
 
-## 3、platforms（链码的编写语言平台）
+## 3、ChaincodeInvocationSpec结构体定义
 
-### 3.1、Platform接口定义
+```go
+type ChaincodeInvocationSpec struct {
+	ChaincodeSpec *ChaincodeSpec //参考本文2.2
+	IdGenerationAlg string
+}
+//代码在protos/peer/chaincode.pb.go
+```
+
+## 4、platforms（链码的编写语言平台）
+
+### 4.1、Platform接口定义
 
 ```go
 type Platform interface {
@@ -85,9 +95,9 @@ type Platform interface {
 //代码在core/chaincode/platforms/platforms.go
 ```
 
-### 3.2、golang语言平台实现
+### 4.2、golang语言平台实现
 
-### 3.2.1、golang.Platform结构体定义及方法
+### 4.2.1、golang.Platform结构体定义及方法
 
 Platform接口golang语言平台实现，即golang.Platform结构体定义及方法。
 
@@ -189,7 +199,7 @@ func (goPlatform *Platform) GetDeploymentPayload(spec *pb.ChaincodeSpec) ([]byte
 ```
 
 
-### 3.2.2、env相关函数
+### 4.2.2、env相关函数
 
 ```go
 type Env map[string]string
@@ -203,7 +213,7 @@ func flattenEnvPaths(paths Paths) string //拼合多个路径字符串，以:分
 //代码在core/chaincode/platforms/golang/env.go
 ```
 
-### 3.2.3、list相关函数
+### 4.2.3、list相关函数
 
 ```go
 //执行命令pgm，支持设置timeout，timeout后将kill进程
@@ -217,7 +227,7 @@ func listImports(env Env, pkg string) ([]string, error)
 //代码在core/chaincode/platforms/golang/list.go
 ```
 
-### 3.2.4、Sources类型及方法
+### 4.2.4、Sources类型及方法
 
 ```go
 type Sources []SourceDescriptor

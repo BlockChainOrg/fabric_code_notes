@@ -186,3 +186,143 @@ func InitCmdFactory(isEndorserRequired, isOrdererRequired bool) (*ChaincodeCmdFa
 ```
 
 BroadcastClient更详细内容，参考[Fabric 1.0源代码笔记 之 Peer（6）BroadcastClient（Broadcast客户端）](BroadcastClient.md)
+
+### 2.2、构造ChaincodeDeploymentSpec消息
+
+```go
+spec, err := getChaincodeSpec(cmd) //构造ChaincodeSpec，参考本文1.2
+//构造ChaincodeDeploymentSpec，参考本文1.2，但无法打包链码文件
+cds, err := getChaincodeDeploymentSpec(spec, false)
+//代码在peer/chaincode/instantiate.go
+```
+
+### 2.3、创建lscc Proposal并签名
+
+```go
+creator, err := cf.Signer.Serialize() //获取签名者
+//policyMarhsalled为flags.StringVarP(&policy, "policy", "P", common.UndefinedParamValue,即链码关联的背书策略
+//即调用 createProposalFromCDS(chainID, cds, creator, policy, escc, vscc, "deploy")，参考本文1.3
+prop, _, err := utils.CreateDeployProposalFromCDS(chainID, cds, creator, policyMarhsalled, []byte(escc), []byte(vscc))
+var signedProp *pb.SignedProposal
+signedProp, err = utils.GetSignedProposal(prop, cf.Signer) //签名提案
+//代码在peer/chaincode/instantiate.go
+```
+
+### 2.4、提交并处理Proposal、获取Proposal响应并创建签名交易Envelope
+
+```go
+proposalResponse, err := cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
+if proposalResponse != nil {
+	env, err := utils.CreateSignedTx(prop, cf.Signer, proposalResponse) //创建签名交易Envelope
+	return env, nil
+}
+//代码在peer/chaincode/instantiate.go
+```
+
+env, err := utils.CreateSignedTx(prop, cf.Signer, proposalResponse)代码如下：
+
+```go
+func CreateSignedTx(proposal *peer.Proposal, signer msp.SigningIdentity, resps ...*peer.ProposalResponse) (*common.Envelope, error) {
+	// the original header
+	hdr, err := GetHeader(proposal.Header)
+	if err != nil {
+		return nil, fmt.Errorf("Could not unmarshal the proposal header")
+	}
+
+	// the original payload
+	pPayl, err := GetChaincodeProposalPayload(proposal.Payload)
+	if err != nil {
+		return nil, fmt.Errorf("Could not unmarshal the proposal payload")
+	}
+
+	// check that the signer is the same that is referenced in the header
+	// TODO: maybe worth removing?
+	signerBytes, err := signer.Serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	shdr, err := GetSignatureHeader(hdr.SignatureHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	if bytes.Compare(signerBytes, shdr.Creator) != 0 {
+		return nil, fmt.Errorf("The signer needs to be the same as the one referenced in the header")
+	}
+
+	// get header extensions so we have the visibility field
+	hdrExt, err := GetChaincodeHeaderExtension(hdr)
+	if err != nil {
+		return nil, err
+	}
+
+	// ensure that all actions are bitwise equal and that they are successful
+	var a1 []byte
+	for n, r := range resps {
+		if n == 0 {
+			a1 = r.Payload
+			if r.Response.Status != 200 {
+				return nil, fmt.Errorf("Proposal response was not successful, error code %d, msg %s", r.Response.Status, r.Response.Message)
+			}
+			continue
+		}
+
+		if bytes.Compare(a1, r.Payload) != 0 {
+			return nil, fmt.Errorf("ProposalResponsePayloads do not match")
+		}
+	}
+
+	// fill endorsements
+	endorsements := make([]*peer.Endorsement, len(resps))
+	for n, r := range resps {
+		endorsements[n] = r.Endorsement
+	}
+
+	// create ChaincodeEndorsedAction
+	cea := &peer.ChaincodeEndorsedAction{ProposalResponsePayload: resps[0].Payload, Endorsements: endorsements}
+
+	// obtain the bytes of the proposal payload that will go to the transaction
+	propPayloadBytes, err := GetBytesProposalPayloadForTx(pPayl, hdrExt.PayloadVisibility)
+	if err != nil {
+		return nil, err
+	}
+
+	// serialize the chaincode action payload
+	cap := &peer.ChaincodeActionPayload{ChaincodeProposalPayload: propPayloadBytes, Action: cea}
+	capBytes, err := GetBytesChaincodeActionPayload(cap)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a transaction
+	taa := &peer.TransactionAction{Header: hdr.SignatureHeader, Payload: capBytes}
+	taas := make([]*peer.TransactionAction, 1)
+	taas[0] = taa
+	tx := &peer.Transaction{Actions: taas}
+
+	// serialize the tx
+	txBytes, err := GetBytesTransaction(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the payload
+	payl := &common.Payload{Header: hdr, Data: txBytes}
+	paylBytes, err := GetBytesPayload(payl)
+	if err != nil {
+		return nil, err
+	}
+
+	// sign the payload
+	sig, err := signer.Sign(paylBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// here's the envelope
+	return &common.Envelope{Payload: paylBytes, Signature: sig}, nil
+}
+
+//代码在protos/utils/txutils.go
+```

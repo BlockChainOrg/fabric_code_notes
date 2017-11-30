@@ -11,3 +11,7 @@
 ## 3、TxRwSet（读写集）
 
 ![](../tx/TxRwSet.png)
+
+## 4、Proposal（提案）
+
+![](../proposal/SignedProposal.png)
