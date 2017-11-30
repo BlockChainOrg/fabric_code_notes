@@ -184,3 +184,5 @@ func InitCmdFactory(isEndorserRequired, isOrdererRequired bool) (*ChaincodeCmdFa
 }
 //代码在peer/chaincode/common.go
 ```
+
+BroadcastClient更详细内容，参考[Fabric 1.0源代码笔记 之 Peer（6）BroadcastClient（Broadcast客户端）](BroadcastClient.md)
