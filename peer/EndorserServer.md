@@ -103,6 +103,8 @@ func (e *Endorser) commitTxSimulation(proposal *pb.Proposal, chainID string, sig
 
 Endorser服务端ProcessProposal处理流程，即func (e *Endorser) ProcessProposal(ctx context.Context, signedProp *pb.SignedProposal) (*pb.ProposalResponse, error)方法实现。
 
+![](EndorserServer_ProcessProposal.png)
+
 #### 3.2.1、校验SignedProposal合法性，并获取ChannelHeader和SignatureHeader
 
 ```go
@@ -227,23 +229,84 @@ func (e *Endorser) simulateProposal(ctx context.Context, chainID string, txid st
 //代码在core/endorser/endorser.go
 ```
 
+e.endorseProposal(ctx, chainID, txid, signedProp, prop, res, simulationResult, ccevent, hdrExt.PayloadVisibility, hdrExt.ChaincodeId, txsim, cd)代码如下：为提案背书。
+
+```go
+func (e *Endorser) callChaincode(ctxt context.Context, chainID string, version string, txid string, signedProp *pb.SignedProposal, prop *pb.Proposal, cis *pb.ChaincodeInvocationSpec, cid *pb.ChaincodeID, txsim ledger.TxSimulator) (*pb.Response, *pb.ChaincodeEvent, error) {
+	var err error
+	var res *pb.Response
+	var ccevent *pb.ChaincodeEvent
+	if txsim != nil {
+		//TXSimulatorKey key = "txsimulatorkey"，key与对象建立关系
+		ctxt = context.WithValue(ctxt, chaincode.TXSimulatorKey, txsim)
+	}
+	scc := syscc.IsSysCC(cid.Name) //是否系统链码
+	cccid := ccprovider.NewCCContext(chainID, cid.Name, version, txid, scc, signedProp, prop)
+	//执行链码
+	res, ccevent, err = chaincode.ExecuteChaincode(ctxt, cccid, cis.ChaincodeSpec.Input.Args)
+	//如果是生命周期管理系统链码，并且参数为实例化或升级
+	if cid.Name == "lscc" && len(cis.ChaincodeSpec.Input.Args) >= 3 && (string(cis.ChaincodeSpec.Input.Args[0]) == "deploy" || string(cis.ChaincodeSpec.Input.Args[0]) == "upgrade") {
+		var cds *pb.ChaincodeDeploymentSpec
+		//获取ChaincodeDeploymentSpec
+		cds, err = putils.GetChaincodeDeploymentSpec(cis.ChaincodeSpec.Input.Args[2])
+		//待实例化或升级的链码执行实例化或升级
+		cccid = ccprovider.NewCCContext(chainID, cds.ChaincodeSpec.ChaincodeId.Name, cds.ChaincodeSpec.ChaincodeId.Version, txid, false, signedProp, prop)
+		_, _, err = chaincode.Execute(ctxt, cccid, cds)
+	}
+	return res, ccevent, err
+}
+//代码在core/endorser/endorser.go
+```
+
 Chaincode更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码）](../chaincode/README.md)
 
 
-### 3.2.4、为提案背书，构造ProposalResponse并返回给Endorser客户端
+#### 3.2.4、为提案背书，构造ProposalResponse并返回给Endorser客户端
 
 ```go
 var pResp *pb.ProposalResponse
-//为提案背书
+//为提案背书，即调取escc系统链码
 pResp, err = e.endorseProposal(ctx, chainID, txid, signedProp, prop, res, simulationResult, ccevent, hdrExt.PayloadVisibility, hdrExt.ChaincodeId, txsim, cd)
 pResp.Response.Payload = res.Payload
 return pResp, nil
 //代码在core/endorser/endorser.go
 ```
 
-e.endorseProposal(ctx, chainID, txid, signedProp, prop, res, simulationResult, ccevent, hdrExt.PayloadVisibility, hdrExt.ChaincodeId, txsim, cd)代码如下：为提案背书。
+e.endorseProposal(ctx, chainID, txid, signedProp, prop, res, simulationResult, ccevent, hdrExt.PayloadVisibility, hdrExt.ChaincodeId, txsim, cd)代码如下：
 
 ```go
+func (e *Endorser) endorseProposal(ctx context.Context, chainID string, txid string, signedProp *pb.SignedProposal, proposal *pb.Proposal, response *pb.Response, simRes []byte, event *pb.ChaincodeEvent, visibility []byte, ccid *pb.ChaincodeID, txsim ledger.TxSimulator, cd *ccprovider.ChaincodeData) (*pb.ProposalResponse, error) {
+	isSysCC := cd == nil
+	var escc string
+	if isSysCC {
+		escc = "escc"
+	} else {
+		escc = cd.Escc
+	}
+
+	var err error
+	var eventBytes []byte
+	if event != nil {
+		eventBytes, err = putils.GetBytesChaincodeEvent(event)
+	}
+
+	resBytes, err := putils.GetBytesResponse(response)
+	if isSysCC {
+		ccid.Version = util.GetSysCCVersion()
+	} else {
+		ccid.Version = cd.Version
+	}
+
+	ccidBytes, err := putils.Marshal(ccid)
+	args := [][]byte{[]byte(""), proposal.Header, proposal.Payload, ccidBytes, resBytes, simRes, eventBytes, visibility}
+	version := util.GetSysCCVersion()
+	ecccis := &pb.ChaincodeInvocationSpec{ChaincodeSpec: &pb.ChaincodeSpec{Type: pb.ChaincodeSpec_GOLANG, ChaincodeId: &pb.ChaincodeID{Name: escc}, Input: &pb.ChaincodeInput{Args: args}}}
+	//执行escc系统链码
+	res, _, err := e.callChaincode(ctx, chainID, version, txid, signedProp, proposal, ecccis, &pb.ChaincodeID{Name: escc}, txsim)
+	prBytes := res.Payload
+	pResp, err := putils.GetProposalResponse(prBytes)
+	return pResp, nil
+}
+
 //代码在core/endorser/endorser.go
-```
 ```
