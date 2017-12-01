@@ -2,7 +2,7 @@
 
 ## 1、EndorserServer概述
 
-EndorserServer相关代码在protos/peer、core/endorser（背书策略）目录下。
+EndorserServer相关代码在protos/peer、core/endorser目录下。
 
 * protos/peer/peer.pb.go，EndorserServer接口定义。
 * core/endorser/endorser.go，EndorserServer接口实现，即Endorser结构体及方法，以及Endorser服务端ProcessProposal处理流程。

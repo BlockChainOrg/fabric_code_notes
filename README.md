@@ -32,6 +32,7 @@
 * [Fabric 1.0源代码笔记 之 scc（系统链码）](scc/README.md)
 * [Fabric 1.0源代码笔记 之 Proposal（提案）](proposal/README.md)
 * [Fabric 1.0源代码笔记 之 Chaincode（链码）](chaincode/README.md)
+	* [（1）ChaincodeSupport（链码支持服务端）](chaincode/ChaincodeSupport.md)
 ------
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](annex/ecdsa.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)

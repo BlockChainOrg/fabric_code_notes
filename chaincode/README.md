@@ -373,37 +373,9 @@ func (c *ccProviderImpl) ReleaseContext() {
 //代码在core/chaincode/ccproviderimpl.go
 ```
 
-### 4.3 ChaincodeSupport结构体
+### 4.3、ChaincodeSupport结构体
 
-#### ChaincodeSupport结构体定义
-
-```go
-var theChaincodeSupport *ChaincodeSupport
-
-type ChaincodeSupport struct {
-	runningChaincodes *runningChaincodes
-	peerAddress       string
-	ccStartupTimeout  time.Duration
-	peerNetworkID     string
-	peerID            string
-	peerTLSCertFile   string
-	peerTLSKeyFile    string
-	peerTLSSvrHostOrd string
-	keepalive         time.Duration
-	chaincodeLogLevel string
-	shimLogLevel      string
-	logFormat         string
-	executetimeout    time.Duration
-	userRunsCC        bool
-	peerTLS           bool
-}
-
-//获取theChaincodeSupport
-func GetChain() *ChaincodeSupport
-//构造ChaincodeSupport并赋值给theChaincodeSupport
-func NewChaincodeSupport(getCCEndpoint func() (*pb.PeerEndpoint, error), userrunsCC bool, ccstartuptimeout time.Duration) *ChaincodeSupport
-//代码在core/chaincode/chaincode_support.go
-```
+ChaincodeSupport更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码）（1）ChaincodeSupport（链码支持服务端）](ChaincodeSupport.md)
 
 ### 4.4、ExecuteChaincode函数（执行链码）
 

@@ -7,3 +7,4 @@
 * **goleveldb**，[https://github.com/syndtr/goleveldb/](https://github.com/syndtr/goleveldb/)，LevelDB包。
 * **kingpin**，[http://gopkg.in/alecthomas/kingpin.v2](http://gopkg.in/alecthomas/kingpin.v2)，另一种交互式命令行工具包。
 * **sarama**，[https://github.com/Shopify/sarama](https://github.com/Shopify/sarama)，go语言版本Kafka客户端。
+* **fsm**，[https://github.com/looplab/fsm](https://github.com/looplab/fsm)，有限状态机。
