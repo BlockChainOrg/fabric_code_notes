@@ -48,7 +48,7 @@ type ChaincodeProposalPayload struct {
 //代码在protos/peer/proposal.pb.go
 ```
 
-ChaincodeInvocationSpec更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码）](chaincode/README.md)
+ChaincodeInvocationSpec更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码）](../chaincode/README.md)
 
 ## 3、ProposalResponse结构体定义
 
