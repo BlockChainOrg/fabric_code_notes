@@ -218,7 +218,7 @@ func initializeBootstrapChannel(conf *config.TopLevel, lf ledger.Factory) {
 //代码在orderer/main.go
 ```
 
-8、注册orderer service并启动grpcServer
+## 8、注册orderer service并启动grpcServer
 
 ```go
 server := NewServer(manager, signer) //构造server
