@@ -39,4 +39,5 @@
 * [Fabric 1.0源代码笔记 之 附录-Fabric 1.0.4 go代码量统计](annex/codestats.md)
 * [Fabric 1.0源代码笔记 之 附录-关键数据结构（图）](annex/datastructure.md)
 * [Fabric 1.0源代码笔记 之 附录-关键流程图（图）](annex/flowchart.md)
+* [Fabric 1.0源代码笔记 之 附录-gRPC（Fabric中注册的gRPC Service）](annex/grpc.md)
 
