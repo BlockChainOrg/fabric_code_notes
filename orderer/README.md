@@ -20,7 +20,7 @@ Orderer代码分布在orderer目录，目录结构如下：
 	
 如下为分节说明Orderer代码：
 	
-* [Fabric 1.0源代码笔记 之 Orderer（1）orderer start命令实现](orderer_start.md)
-* [Fabric 1.0源代码笔记 之 Orderer（2）localconfig（Orderer配置文件定义）](localconfig.md)
-* [Fabric 1.0源代码笔记 之 Orderer（3）ledger（Orderer Ledger）](orderer_ledger.md)
-* [Fabric 1.0源代码笔记 之 Orderer（4）BroadcastServer（Broadcast服务端）](BroadcastServer.md)
+* [Fabric 1.0源代码笔记 之 Orderer #orderer start命令实现](orderer_start.md)
+* [Fabric 1.0源代码笔记 之 Orderer #localconfig（Orderer配置文件定义）](localconfig.md)
+* [Fabric 1.0源代码笔记 之 Orderer #ledger（Orderer Ledger）](orderer_ledger.md)
+* [Fabric 1.0源代码笔记 之 Orderer #BroadcastServer（Broadcast服务端）](BroadcastServer.md)

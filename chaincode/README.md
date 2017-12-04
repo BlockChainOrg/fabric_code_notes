@@ -375,7 +375,7 @@ func (c *ccProviderImpl) ReleaseContext() {
 
 ### 4.3、ChaincodeSupport结构体
 
-ChaincodeSupport更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码）（1）ChaincodeSupport（链码支持服务端）](ChaincodeSupport.md)
+ChaincodeSupport更详细内容，参考：[Fabric 1.0源代码笔记 之 Chaincode（链码） #ChaincodeSupport（链码支持服务端）](ChaincodeSupport.md)
 
 ### 4.4、ExecuteChaincode函数（执行链码）
 

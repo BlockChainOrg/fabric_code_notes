@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Chaincode（链码）（1）ChaincodeSupport（链码支持服务端）
+# Fabric 1.0源代码笔记 之 Chaincode（链码） #ChaincodeSupport（链码支持服务端）
 
 ## 1、ChaincodeSupport概述
 

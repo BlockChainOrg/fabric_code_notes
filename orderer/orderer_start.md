@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Orderer（1）orderer start命令实现
+# Fabric 1.0源代码笔记 之 Orderer #orderer start命令实现
 
 ![](orderer_start.png)
 
@@ -80,7 +80,7 @@ func Load() *TopLevel {
 //代码在orderer/localconfig/config.go
 ```
 
-TopLevel结构体及本地配置更详细内容，参考：[Fabric 1.0源代码笔记 之 Orderer（2）localconfig（Orderer配置文件定义）](localconfig.md)
+TopLevel结构体及本地配置更详细内容，参考：[Fabric 1.0源代码笔记 之 Orderer #localconfig（Orderer配置文件定义）](localconfig.md)
 
 ## 3、初始化日志系统（日志输出、日志格式、日志级别、sarama日志）
 

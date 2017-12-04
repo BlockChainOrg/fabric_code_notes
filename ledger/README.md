@@ -5,10 +5,10 @@
 Ledger，即账本数据库。Fabric账本中有四种数据库，idStore（ledgerID数据库）、blkstorage（block文件存储）、statedb（状态数据库）、historydb（历史数据库）。
 其中idStore、historydb使用leveldb实现，statedb可选择使用leveldb或couchDB。而blkstorage中index部分使用leveldb实现，实际区块链数据存储使用文件实现。
 
-* idStore，默认目录/var/hyperledger/production/ledgersData/ledgerProvider，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
-* blkstorage，默认目录/var/hyperledger/production/ledgersData/chains，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block文件存储）](blkstorage.md)
-* statedb，默认目录/var/hyperledger/production/ledgersData/stateLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（3）statedb（状态数据库）](statedb.md)
-* historydb，默认目录/var/hyperledger/production/ledgersData/historyLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（4）historydb（历史数据库）](historydb.md)
+* idStore，默认目录/var/hyperledger/production/ledgersData/ledgerProvider，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #idStore（ledgerID数据库）](idstore.md)
+* blkstorage，默认目录/var/hyperledger/production/ledgersData/chains，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #blkstorage（block文件存储）](blkstorage.md)
+* statedb，默认目录/var/hyperledger/production/ledgersData/stateLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #statedb（状态数据库）](statedb.md)
+* historydb，默认目录/var/hyperledger/production/ledgersData/historyLeveldb，更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #historydb（历史数据库）](historydb.md)
 
 ## 2、Ledger代码目录结构
 
@@ -183,10 +183,10 @@ type Provider struct {
 //代码在core/ledger/kvledger/kv_ledger_provider.go
 ```
 
-* idStore更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（1）idStore（ledgerID数据库）](idstore.md)
-* blkstorage更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block文件存储）](blkstorage.md)
-* statedb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（3）statedb（状态数据库）](statedb.md)
-* historydb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger（4）historydb（历史数据库）](historydb.md)
+* idStore更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #idStore（ledgerID数据库）](idstore.md)
+* blkstorage更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #blkstorage（block文件存储）](blkstorage.md)
+* statedb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #statedb（状态数据库）](statedb.md)
+* historydb更详细内容，参考：[Fabric 1.0源代码笔记 之 Ledger #historydb（历史数据库）](historydb.md)
 
 涉及方法如下：
 
