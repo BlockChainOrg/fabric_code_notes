@@ -28,8 +28,14 @@ peer chaincode更详细内容，参考：[Fabric 1.0源代码笔记 之 Peer #pe
 
 ![](../peer/peer_chaincode_invoke(query).png)
 
-### 4、EndorserServer ProcessProposal流程图
+## 4、EndorserServer ProcessProposal流程图
 
 ![](../peer/EndorserServer_ProcessProposal.png)
 
 EndorserServer ProcessProposal更详细内容，参考：[Fabric 1.0源代码笔记 之 Peer #EndorserServer（Endorser服务端）](../peer/EndorserServer.md)
+
+## 5、BroadcastServer Broadcast流程图
+
+![](../orderer/BroadcastServer_Broadcast.png)
+
+BroadcastServer Broadcast更详细内容，参考：[Fabric 1.0源代码笔记 之 Peer #BroadcastClient（Broadcast客户端）](../orderer/BroadcastServer.md)
