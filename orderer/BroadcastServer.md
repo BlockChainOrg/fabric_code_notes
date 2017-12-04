@@ -7,6 +7,8 @@ BroadcastServer相关代码在protos/orderer、orderer目录下。
 protos/orderer/ab.pb.go，AtomicBroadcastServer接口定义。
 orderer/server.go，go，AtomicBroadcastServer接口实现。
 
+![](BroadcastServer_Broadcast.png)
+
 ## 2、AtomicBroadcastServer接口定义
 
 ### 2.1、AtomicBroadcastServer接口定义
