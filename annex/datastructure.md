@@ -16,7 +16,7 @@ Envelope更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx（Transacti
 
 ![](../tx/TxRwSet.png)
 
-TxRwSet更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx（1）RWSet（读写集）](../tx/rwset.md)
+TxRwSet更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx #RWSet（读写集）](../tx/rwset.md)
 
 ## 4、Proposal（提案）
 
