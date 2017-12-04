@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block文件存储）
+# Fabric 1.0源代码笔记 之 Ledger #blkstorage（block文件存储）
 
 ## blkstorage概述
 

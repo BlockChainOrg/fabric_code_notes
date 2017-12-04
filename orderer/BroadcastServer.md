@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Orderer（4）BroadcastServer（Broadcast服务端）
+# Fabric 1.0源代码笔记 之 Orderer #BroadcastServer（Broadcast服务端）
 
 ## 1、BroadcastServer概述
 

@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Orderer（3）ledger（Orderer Ledger）
+# Fabric 1.0源代码笔记 之 Orderer #ledger（Orderer Ledger）
 
 ## 1、Orderer Ledger概述
 
@@ -78,7 +78,7 @@ func New(directory string) ledger.Factory
 //代码在orderer/ledger/file/factory.go
 ```
 
-blkstorage更详细内容，可参考：[Fabric 1.0源代码笔记 之 Ledger（2）blkstorage（block文件存储）](../ledger/blkstorage.md)
+blkstorage更详细内容，可参考：[Fabric 1.0源代码笔记 之 Ledger #blkstorage（block文件存储）](../ledger/blkstorage.md)
 
 ### 3.2、fileLedger结构体及方法（实现ReadWriter接口）
 

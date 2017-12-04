@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Ledger（4）historydb（历史数据库）
+# Fabric 1.0源代码笔记 之 Ledger #historydb（历史数据库）
 
 ## 1、historydb概述
 

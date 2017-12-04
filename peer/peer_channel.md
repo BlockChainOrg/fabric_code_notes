@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Peer（3）peer channel命令及子命令实现
+# Fabric 1.0源代码笔记 之 Peer #peer channel命令及子命令实现
 
 ## 1、peer channel create子命令实现（创建通道）
 

@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Peer（4）peer chaincode命令及子命令实现
+# Fabric 1.0源代码笔记 之 Peer #peer chaincode命令及子命令实现
 
 ## 1、peer chaincode install子命令实现（安装链码）
 
@@ -187,7 +187,7 @@ func InitCmdFactory(isEndorserRequired, isOrdererRequired bool) (*ChaincodeCmdFa
 //代码在peer/chaincode/common.go
 ```
 
-BroadcastClient更详细内容，参考[Fabric 1.0源代码笔记 之 Peer（6）BroadcastClient（Broadcast客户端）](BroadcastClient.md)
+BroadcastClient更详细内容，参考[Fabric 1.0源代码笔记 之 Peer #BroadcastClient（Broadcast客户端）](BroadcastClient.md)
 
 ### 2.2、构造ChaincodeDeploymentSpec消息
 

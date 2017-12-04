@@ -222,7 +222,7 @@ putils更详细内容，参考：[Fabric 1.0源代码笔记 之 putils（protos/
 
 ## 5、RWSet（读写集）
 
-RWSet更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx（1）RWSet（读写集）](rwset.md)
+RWSet更详细内容，参考：[Fabric 1.0源代码笔记 之 Tx #RWSet（读写集）](rwset.md)
 
 ## 6、version.Height结构体及方法
 

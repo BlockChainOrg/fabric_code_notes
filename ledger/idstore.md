@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Ledger（1）idStore（ledgerID数据库）
+# Fabric 1.0源代码笔记 之 Ledger #idStore（ledgerID数据库）
 
 ## 1、idStore概述
 

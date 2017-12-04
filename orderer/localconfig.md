@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Orderer（2）localconfig（Orderer配置文件定义）
+# Fabric 1.0源代码笔记 之 Orderer #localconfig（Orderer配置文件定义）
 
 ## 1、配置文件定义
 
