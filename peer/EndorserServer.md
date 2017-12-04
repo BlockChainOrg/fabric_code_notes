@@ -1,4 +1,4 @@
-# Fabric 1.0源代码笔记 之 Peer（7）EndorserServer（Endorser服务端）
+# Fabric 1.0源代码笔记 之 Peer（8）EndorserServer（Endorser服务端）
 
 ## 1、EndorserServer概述
 
