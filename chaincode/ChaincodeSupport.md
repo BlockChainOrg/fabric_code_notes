@@ -113,11 +113,14 @@ func IsDevMode() bool
 
 ### 3.3、ChaincodeSupport服务端Register处理流程
 
+即接收和处理ChaincodeMessage。
+
 #### 3.3.1、构造Handler
 
 ```go
 //构造Handler
 handler := newChaincodeSupportHandler(chaincodeSupport, stream)
+return handler.processStream() //下文展开介绍
 //代码在core/chaincode/handler.go
 ```
 
@@ -180,9 +183,154 @@ func newChaincodeSupportHandler(chaincodeSupport *ChaincodeSupport, peerChatStre
 //代码在core/chaincode/handler.go
 ```
 
-#### 3.3.2、
+#### 3.3.2、处理流
 
+```go
+return handler.processStream() //处理流
+//代码在core/chaincode/handler.go
+```
 
+return handler.processStream()代码如下：
+
+```go
+func (handler *Handler) processStream() error {
+	defer handler.deregister()
+	msgAvail := make(chan *pb.ChaincodeMessage) //可用的ChaincodeMessage
+	var nsInfo *nextStateInfo
+	var in *pb.ChaincodeMessage
+	var err error
+
+	recv := true //收到ChaincodeMessage，即in = <-msgAvail
+	errc := make(chan error, 1)
+	for {
+		in = nil
+		err = nil
+		nsInfo = nil
+		if recv {
+			recv = false
+			go func() { //routine用于接收ChaincodeMessage
+				var in2 *pb.ChaincodeMessage
+				in2, err = handler.ChatStream.Recv()
+				msgAvail <- in2 //收到ChaincodeMessage
+			}()
+		}
+		select {
+		case sendErr := <-errc: 
+			if sendErr != nil { //收到错误
+				return sendErr
+			}
+			continue //收到nil
+		case in = <-msgAvail: //收到ChaincodeMessage
+			if err == io.EOF { //io结束
+				chaincodeLogger.Debugf("Received EOF, ending chaincode support stream, %s", err)
+				return err
+			} else if err != nil { //收到错误
+				chaincodeLogger.Errorf("Error handling chaincode support stream: %s", err)
+				return err
+			} else if in == nil { //收到空
+				err = fmt.Errorf("Received nil message, ending chaincode support stream")
+				chaincodeLogger.Debug("Received nil message, ending chaincode support stream")
+				return err
+			}
+			chaincodeLogger.Debugf("[%s]Received message %s from shim", shorttxid(in.Txid), in.Type.String())
+			if in.Type.String() == pb.ChaincodeMessage_ERROR.String() { //收到错误
+				chaincodeLogger.Errorf("Got error: %s", string(in.Payload))
+			}
+
+			//继续接收下一条
+			recv = true
+			if in.Type == pb.ChaincodeMessage_KEEPALIVE { //收到KEEPALIVE消息
+				chaincodeLogger.Debug("Received KEEPALIVE Response")
+				continue
+			}
+		case nsInfo = <-handler.nextState: //下一个状态
+			in = nsInfo.msg
+			if in == nil { //下一个状态消息为nil，结束流
+				err = fmt.Errorf("Next state nil message, ending chaincode support stream")
+				chaincodeLogger.Debug("Next state nil message, ending chaincode support stream")
+				return err
+			}
+			chaincodeLogger.Debugf("[%s]Move state message %s", shorttxid(in.Txid), in.Type.String())
+		case <-handler.waitForKeepaliveTimer():
+			if handler.chaincodeSupport.keepalive <= 0 {
+				chaincodeLogger.Errorf("Invalid select: keepalive not on (keepalive=%d)", handler.chaincodeSupport.keepalive)
+				continue
+			}
+			handler.serialSendAsync(&pb.ChaincodeMessage{Type: pb.ChaincodeMessage_KEEPALIVE}, nil)
+			continue
+		}
+
+		err = handler.HandleMessage(in) //处理消息
+		if err != nil {
+			chaincodeLogger.Errorf("[%s]Error handling message, ending stream: %s", shorttxid(in.Txid), err)
+			return fmt.Errorf("Error handling message, ending stream: %s", err)
+		}
+
+		if nsInfo != nil && nsInfo.sendToCC {
+			chaincodeLogger.Debugf("[%s]sending state message %s", shorttxid(in.Txid), in.Type.String())
+			if nsInfo.sendSync {
+				if in.Type.String() != pb.ChaincodeMessage_READY.String() {
+					panic(fmt.Sprintf("[%s]Sync send can only be for READY state %s\n", shorttxid(in.Txid), in.Type.String()))
+				}
+				if err = handler.serialSend(in); err != nil {
+					return fmt.Errorf("[%s]Error sending ready  message, ending stream: %s", shorttxid(in.Txid), err)
+				}
+			} else {
+				handler.serialSendAsync(in, errc)
+			}
+		}
+	}
+}
+//代码在core/chaincode/handler.go
+```
+
+err = handler.HandleMessage(in)代码如下：
+
+```go
+func (handler *Handler) HandleMessage(msg *pb.ChaincodeMessage) error {
+	eventErr := handler.FSM.Event(msg.Type.String(), msg) //发起事件
+	filteredErr := filterError(eventErr)
+	return filteredErr
+}
+//代码在core/chaincode/handler.go
+```
+
+补充ChaincodeMessage结构体：
+
+```go
+type ChaincodeMessage struct {
+	Type      ChaincodeMessage_Type
+	Timestamp *google_protobuf1.Timestamp
+	Payload   []byte
+	Txid      string
+	Proposal  *SignedProposal
+	ChaincodeEvent *ChaincodeEvent
+}
+
+type ChaincodeMessage_Type int32
+const (
+	ChaincodeMessage_UNDEFINED           ChaincodeMessage_Type = 0
+	ChaincodeMessage_REGISTER            ChaincodeMessage_Type = 1
+	ChaincodeMessage_REGISTERED          ChaincodeMessage_Type = 2
+	ChaincodeMessage_INIT                ChaincodeMessage_Type = 3
+	ChaincodeMessage_READY               ChaincodeMessage_Type = 4
+	ChaincodeMessage_TRANSACTION         ChaincodeMessage_Type = 5
+	ChaincodeMessage_COMPLETED           ChaincodeMessage_Type = 6
+	ChaincodeMessage_ERROR               ChaincodeMessage_Type = 7
+	ChaincodeMessage_GET_STATE           ChaincodeMessage_Type = 8
+	ChaincodeMessage_PUT_STATE           ChaincodeMessage_Type = 9
+	ChaincodeMessage_DEL_STATE           ChaincodeMessage_Type = 10
+	ChaincodeMessage_INVOKE_CHAINCODE    ChaincodeMessage_Type = 11
+	ChaincodeMessage_RESPONSE            ChaincodeMessage_Type = 13
+	ChaincodeMessage_GET_STATE_BY_RANGE  ChaincodeMessage_Type = 14
+	ChaincodeMessage_GET_QUERY_RESULT    ChaincodeMessage_Type = 15
+	ChaincodeMessage_QUERY_STATE_NEXT    ChaincodeMessage_Type = 16
+	ChaincodeMessage_QUERY_STATE_CLOSE   ChaincodeMessage_Type = 17
+	ChaincodeMessage_KEEPALIVE           ChaincodeMessage_Type = 18
+	ChaincodeMessage_GET_HISTORY_FOR_KEY ChaincodeMessage_Type = 19
+)
+//代码在protos/peer/chaincode_shim.pb.go
+```
 
 ## 4、HandleMessage接口定义及实现
 
@@ -271,8 +419,10 @@ func (handler *Handler) enterReadyState(e *fsm.Event, state string)
 func (handler *Handler) enterEndState(e *fsm.Event, state string)
 func (handler *Handler) setChaincodeProposal(signedProp *pb.SignedProposal, prop *pb.Proposal, msg *pb.ChaincodeMessage) error
 func (handler *Handler) ready(ctxt context.Context, chainID string, txid string, signedProp *pb.SignedProposal, prop *pb.Proposal) (chan *pb.ChaincodeMessage, error)
+//处理消息
 func (handler *Handler) HandleMessage(msg *pb.ChaincodeMessage) error
 func filterError(errFromFSMEvent error) error
 func (handler *Handler) sendExecuteMessage(ctxt context.Context, chainID string, msg *pb.ChaincodeMessage, signedProp *pb.SignedProposal, prop *pb.Proposal) (chan *pb.ChaincodeMessage, error)
 func (handler *Handler) isRunning() bool
+//代码在core/chaincode/handler.go
 ```
