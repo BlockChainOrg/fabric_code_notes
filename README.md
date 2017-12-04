@@ -16,6 +16,7 @@
 	* [localconfig（Orderer配置文件定义）](orderer/localconfig.md)
 	* [ledger（Orderer Ledger）](orderer/orderer_ledger.md)
 	* [BroadcastServer（Broadcast服务端）](orderer/BroadcastServer.md)
+	* [multichain（多链支持包）](orderer/multichain.md)
 * [Fabric 1.0源代码笔记 之 flogging（Fabric日志系统）](flogging/README.md)
 * [Fabric 1.0源代码笔记 之 BCCSP（区块链加密服务提供者）](bccsp/README.md)
 * [Fabric 1.0源代码笔记 之 MSP（成员关系服务提供者）](msp/README.md)
@@ -35,6 +36,8 @@
 * [Fabric 1.0源代码笔记 之 Proposal（提案）](proposal/README.md)
 * [Fabric 1.0源代码笔记 之 Chaincode（链码）](chaincode/README.md)
 	* [ChaincodeSupport（链码支持服务端）](chaincode/ChaincodeSupport.md)
+* [Fabric 1.0源代码笔记 之 consenter（共识插件）](consenter/README.md)
+	* [filter（过滤器）](consenter/filter.md)
 ------
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](annex/ecdsa.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)

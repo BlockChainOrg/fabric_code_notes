@@ -24,3 +24,4 @@ Orderer代码分布在orderer目录，目录结构如下：
 * [Fabric 1.0源代码笔记 之 Orderer #localconfig（Orderer配置文件定义）](localconfig.md)
 * [Fabric 1.0源代码笔记 之 Orderer #ledger（Orderer Ledger）](orderer_ledger.md)
 * [Fabric 1.0源代码笔记 之 Orderer #BroadcastServer（Broadcast服务端）](BroadcastServer.md)
+* [Fabric 1.0源代码笔记 之 Orderer #multichain（多链支持包）](multichain.md)
