@@ -7,6 +7,7 @@ BroadcastClient代码分布如下：
 * peer/common/ordererclient.go，BroadcastClient接口定义及实现，及BroadcastClient工具函数。
 * protos/orderer/ab.pb.go，AtomicBroadcastClient接口定义及实现，AtomicBroadcast_BroadcastClient接口定义及实现。
 
+![](orderer_start.png)
 ![](BroadcastServer_Broadcast.png)
 
 ## 2、BroadcastClient接口定义及实现
