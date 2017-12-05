@@ -172,7 +172,7 @@ func initializeLocalMsp(conf *config.TopLevel) {
 
 MSP（成员关系服务提供者）更详细内容，参考：[Fabric 1.0源代码笔记 之 MSP（成员关系服务提供者）](../msp/README.md)
 
-## 7、初始化MultiChain管理器
+## 7、初始化MultiChain管理器（启动共识插件goroutine，接收和处理消息）
 
 ```go
 manager := initializeMultiChainManager(conf, signer)

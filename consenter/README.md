@@ -122,7 +122,193 @@ func (ch *chain) main() {
 
 ## 4、kafka版本共识插件
 
+### 4.1、Consenter接口实现
 
+```go
+type consenterImpl struct {
+	brokerConfigVal *sarama.Config
+	tlsConfigVal    localconfig.TLS
+	retryOptionsVal localconfig.Retry
+	kafkaVersionVal sarama.KafkaVersion
+}
+//构造consenterImpl
+func New(tlsConfig localconfig.TLS, retryOptions localconfig.Retry, kafkaVersion sarama.KafkaVersion) multichain.Consenter
+//构造chainImpl
+func (consenter *consenterImpl) HandleChain(support multichain.ConsenterSupport, metadata *cb.Metadata) (multichain.Chain, error)
+func (consenter *consenterImpl) brokerConfig() *sarama.Config
+func (consenter *consenterImpl) retryOptions() localconfig.Retry
+//代码在orderer/kafka/consenter.go
+```
+
+### 4.2、Chain接口实现
+
+```go
+type chainImpl struct {
+	consenter commonConsenter
+	support   multichain.ConsenterSupport
+
+	channel             channel
+	lastOffsetPersisted int64
+	lastCutBlockNumber  uint64
+
+	producer        sarama.SyncProducer
+	parentConsumer  sarama.Consumer
+	channelConsumer sarama.PartitionConsumer
+
+	errorChan chan struct{}
+	haltChan chan struct{}
+	startChan chan struct{}
+}
+
+//构造chainImpl
+func newChain(consenter commonConsenter, support multichain.ConsenterSupport, lastOffsetPersisted int64) (*chainImpl, error)
+//获取chain.errorChan
+func (chain *chainImpl) Errored() <-chan struct{}
+//go startThread(chain)
+func (chain *chainImpl) Start()
+//结束
+func (chain *chainImpl) Halt()
+//接收Envelope消息，序列化后发给kafka
+func (chain *chainImpl) Enqueue(env *cb.Envelope) bool
+//goroutine，调取chain.processMessagesToBlocks()
+func startThread(chain *chainImpl)
+//goroutine实际功能实现
+func (chain *chainImpl) processMessagesToBlocks() ([]uint64, error)
+func (chain *chainImpl) closeKafkaObjects() []error
+func getLastCutBlockNumber(blockchainHeight uint64) uint64
+func getLastOffsetPersisted(metadataValue []byte, chainID string) int64
+func newConnectMessage() *ab.KafkaMessage
+func newRegularMessage(payload []byte) *ab.KafkaMessage
+func newTimeToCutMessage(blockNumber uint64) *ab.KafkaMessage
+//构造sarama.ProducerMessage
+func newProducerMessage(channel channel, pld []byte) *sarama.ProducerMessage
+func processConnect(channelName string) error
+func processRegular(regularMessage *ab.KafkaMessageRegular, support multichain.ConsenterSupport, timer *<-chan time.Time, receivedOffset int64, lastCutBlockNumber *uint64) error
+func processTimeToCut(ttcMessage *ab.KafkaMessageTimeToCut, support multichain.ConsenterSupport, lastCutBlockNumber *uint64, timer *<-chan time.Time, receivedOffset int64) error
+func sendConnectMessage(retryOptions localconfig.Retry, exitChan chan struct{}, producer sarama.SyncProducer, channel channel) error
+func sendTimeToCut(producer sarama.SyncProducer, channel channel, timeToCutBlockNumber uint64, timer *<-chan time.Time) error
+func setupChannelConsumerForChannel(retryOptions localconfig.Retry, haltChan chan struct{}, parentConsumer sarama.Consumer, channel channel, startFrom int64) (sarama.PartitionConsumer, error)
+func setupParentConsumerForChannel(retryOptions localconfig.Retry, haltChan chan struct{}, brokers []string, brokerConfig *sarama.Config, channel channel) (sarama.Consumer, error)
+func setupProducerForChannel(retryOptions localconfig.Retry, haltChan chan struct{}, brokers []string, brokerConfig *sarama.Config, channel channel) (sarama.SyncProducer, error)
+//代码在orderer/kafka/chain.go
+```
+
+func (chain *chainImpl) Enqueue(env *cb.Envelope) bool代码如下：
+
+```go
+func (chain *chainImpl) Enqueue(env *cb.Envelope) bool {
+	select {
+	case <-chain.startChan: //开始阶段已完成
+		select {
+		case <-chain.haltChan: 
+			return false
+		default:
+			marshaledEnv, err := utils.Marshal(env) //env序列化
+			payload := utils.MarshalOrPanic(newRegularMessage(marshaledEnv))
+			message := newProducerMessage(chain.channel, payload) //构造sarama.ProducerMessage
+			_, _, err := chain.producer.SendMessage(message) //向kafka发送message
+			return true
+		}
+	default: 
+		return false
+	}
+}
+//代码在orderer/kafka/chain.go
+```
+
+func newProducerMessage(channel channel, pld []byte) *sarama.ProducerMessage代码如下：
+
+```go
+func newProducerMessage(channel channel, pld []byte) *sarama.ProducerMessage {
+	return &sarama.ProducerMessage{
+		Topic: channel.topic(),
+		Key:   sarama.StringEncoder(strconv.Itoa(int(channel.partition()))), 
+		Value: sarama.ByteEncoder(pld),
+	}
+}
+//代码在orderer/kafka/chain.go
+```
+
+func (chain *chainImpl) processMessagesToBlocks() ([]uint64, error)代码如下：
+
+```go
+func (chain *chainImpl) processMessagesToBlocks() ([]uint64, error) {
+	counts := make([]uint64, 11) // For metrics and tests
+	msg := new(ab.KafkaMessage)
+	var timer <-chan time.Time
+
+	defer func() { //Halt()时执行
+		select {
+		case <-chain.errorChan:
+		default:
+			close(chain.errorChan)
+		}
+	}()
+
+	for {
+		select {
+		case <-chain.haltChan: //退出
+			counts[indexExitChanPass]++
+			return counts, nil
+		case kafkaErr := <-chain.channelConsumer.Errors(): //错误
+			counts[indexRecvError]++
+			select {
+			case <-chain.errorChan:
+			default:
+				close(chain.errorChan)
+			}
+			go sendConnectMessage(chain.consenter.retryOptions(), chain.haltChan, chain.producer, chain.channel)
+		case in, ok := <-chain.channelConsumer.Messages(): //接收消息
+			select {
+			case <-chain.errorChan: //错误
+				chain.errorChan = make(chan struct{})
+			default:
+			}
+			err := proto.Unmarshal(in.Value, msg)
+			counts[indexRecvPass]++
+			switch msg.Type.(type) { //消息类型
+			case *ab.KafkaMessage_Connect: //连接
+				_ = processConnect(chain.support.ChainID())
+				counts[indexProcessConnectPass]++
+			case *ab.KafkaMessage_TimeToCut: //超时
+				err := processTimeToCut(msg.GetTimeToCut(), chain.support, &chain.lastCutBlockNumber, &timer, in.Offset)
+				counts[indexProcessTimeToCutPass]++
+			case *ab.KafkaMessage_Regular: //正常消息
+				err := processRegular(msg.GetRegular(), chain.support, &timer, in.Offset, &chain.lastCutBlockNumber)
+				counts[indexProcessRegularPass]++
+			}
+		case <-timer:
+			err := sendTimeToCut(chain.producer, chain.channel, chain.lastCutBlockNumber+1, &timer)
+			counts[indexSendTimeToCutPass]++
+		}
+	}
+}
+//代码在orderer/kafka/chain.go
+```
+
+func processRegular(regularMessage *ab.KafkaMessageRegular, support multichain.ConsenterSupport, timer *<-chan time.Time, receivedOffset int64, lastCutBlockNumber *uint64) error 代码如下：
+
+```go
+func processRegular(regularMessage *ab.KafkaMessageRegular, support multichain.ConsenterSupport, timer *<-chan time.Time, receivedOffset int64, lastCutBlockNumber *uint64) error {
+	env := new(cb.Envelope)
+	proto.Unmarshal(regularMessage.Payload, env) //发序列化为env
+	batches, committers, ok, pending := support.BlockCutter().Ordered(env)
+	for i, batch := range batches {
+		block := support.CreateNextBlock(batch)
+		encodedLastOffsetPersisted := utils.MarshalOrPanic(&ab.KafkaMetadata{LastOffsetPersisted: offset})
+		support.WriteBlock(block, committers[i], encodedLastOffsetPersisted) //写入块
+		*lastCutBlockNumber++
+		offset++
+	}
+
+	if len(batches) > 0 {
+		*timer = nil
+	}
+	return nil
+}
+
+//代码在orderer/kafka/chain.go
+```
 
 ## 5、blockcutter
 
