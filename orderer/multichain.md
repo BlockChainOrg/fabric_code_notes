@@ -149,7 +149,9 @@ type Chain interface {
 //代码在orderer/multichain/chainsupport.go
 ```
 
-### 3.2、ChainSupport接口实现
+Consenter和Chain更详细内容，参考：[Fabric 1.0源代码笔记 之 consenter（共识插件）](consenter/filter.md)
+
+### 3.2、ChainSupport和ConsenterSupport接口实现
 
 ChainSupport接口实现，即chainSupport结构体及方法。
 
@@ -180,11 +182,28 @@ func (cs *chainSupport) Filters() *filter.RuleSet
 func (cs *chainSupport) BlockCutter() blockcutter.Receiver
 func (cs *chainSupport) Reader() ledger.Reader
 func (cs *chainSupport) Enqueue(env *cb.Envelope) bool
-func (cs *chainSupport) Errored() <-chan struct{} {
-func (cs *chainSupport) CreateNextBlock(messages []*cb.Envelope) *cb.Block {
-func (cs *chainSupport) addBlockSignature(block *cb.Block) {
-func (cs *chainSupport) addLastConfigSignature(block *cb.Block) {
-func (cs *chainSupport) WriteBlock(block *cb.Block, committers []filter.Committer, encodedMetadataValue []byte) *cb.Block {
+func (cs *chainSupport) Errored() <-chan struct{}
+//创建块，调取ledger.CreateNextBlock(cs.ledger, messages)
+func (cs *chainSupport) CreateNextBlock(messages []*cb.Envelope) *cb.Block
+func (cs *chainSupport) addBlockSignature(block *cb.Block)
+func (cs *chainSupport) addLastConfigSignature(block *cb.Block)
+//写入块
+func (cs *chainSupport) WriteBlock(block *cb.Block, committers []filter.Committer, encodedMetadataValue []byte) *cb.Block 
 func (cs *chainSupport) Height() uint64
+//代码在orderer/multichain/chainsupport.go
+```
+
+func (cs *chainSupport) WriteBlock(block *cb.Block, committers []filter.Committer, encodedMetadataValue []byte) *cb.Block 代码如下：
+
+```go
+func (cs *chainSupport) WriteBlock(block *cb.Block, committers []filter.Committer, encodedMetadataValue []byte) *cb.Block {
+	for _, committer := range committers {
+		committer.Commit()
+	}
+	cs.addBlockSignature(block)
+	cs.addLastConfigSignature(block)
+	err := cs.ledger.Append(block)//账本追加块
+	return block
+}
 //代码在orderer/multichain/chainsupport.go
 ```

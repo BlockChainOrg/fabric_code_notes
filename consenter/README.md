@@ -93,8 +93,8 @@ func (ch *chain) main() {
 				continue
 			}
 			for i, batch := range batches {
-				block := ch.support.CreateNextBlock(batch)
-				ch.support.WriteBlock(block, committers[i], nil)
+				block := ch.support.CreateNextBlock(batch) //每个批处理创建一个块
+				ch.support.WriteBlock(block, committers[i], nil) //写入块
 			}
 			if len(batches) > 0 {
 				timer = nil
@@ -119,6 +119,10 @@ func (ch *chain) main() {
 }
 //代码在orderer/solo/consensus.go
 ```
+
+## 4、kafka版本共识插件
+
+
 
 ## 5、blockcutter
 
@@ -160,58 +164,54 @@ func (r *receiver) Ordered(msg *cb.Envelope) (messageBatches [][]*cb.Envelope, c
 
 ```go
 func (r *receiver) Ordered(msg *cb.Envelope) (messageBatches [][]*cb.Envelope, committerBatches [][]filter.Committer, validTx bool, pending bool) {
-	// The messages must be filtered a second time in case configuration has changed since the message was received
-	committer, err := r.filters.Apply(msg)
-	if err != nil {
+	committer, err := r.filters.Apply(msg) //执行过滤器
+		if err != nil {
 		logger.Debugf("Rejecting message: %s", err)
-		return // We don't bother to determine `pending` here as it's not processed in error case
+		return
 	}
-
-	// message is valid
+	
 	validTx = true
-
 	messageSizeBytes := messageSizeBytes(msg)
-
+	//孤立的块，或者交易大小超限，将被隔离
 	if committer.Isolated() || messageSizeBytes > r.sharedConfigManager.BatchSize().PreferredMaxBytes {
-
 		if committer.Isolated() {
+			//发现消息要求被隔离, 切割成自己的批
 			logger.Debugf("Found message which requested to be isolated, cutting into its own batch")
 		} else {
+			//当前消息 大于默认批处理大小, 将被隔离
 			logger.Debugf("The current message, with %v bytes, is larger than the preferred batch size of %v bytes and will be isolated.", messageSizeBytes, r.sharedConfigManager.BatchSize().PreferredMaxBytes)
 		}
-
-		// cut pending batch, if it has any messages
+		//剪切批处理
 		if len(r.pendingBatch) > 0 {
 			messageBatch, committerBatch := r.Cut()
 			messageBatches = append(messageBatches, messageBatch)
 			committerBatches = append(committerBatches, committerBatch)
 		}
 
-		// create new batch with single message
+		//创建新批次
 		messageBatches = append(messageBatches, []*cb.Envelope{msg})
 		committerBatches = append(committerBatches, []filter.Committer{committer})
 
 		return
 	}
 
+	//混合块且大小未超限
 	messageWillOverflowBatchSizeBytes := r.pendingBatchSizeBytes+messageSizeBytes > r.sharedConfigManager.BatchSize().PreferredMaxBytes
 
-	if messageWillOverflowBatchSizeBytes {
-		logger.Debugf("The current message, with %v bytes, will overflow the pending batch of %v bytes.", messageSizeBytes, r.pendingBatchSizeBytes)
-		logger.Debugf("Pending batch would overflow if current message is added, cutting batch now.")
+	if messageWillOverflowBatchSizeBytes { //添加当前消息后，批处理将溢出
 		messageBatch, committerBatch := r.Cut()
 		messageBatches = append(messageBatches, messageBatch)
 		committerBatches = append(committerBatches, committerBatch)
 	}
 
-	logger.Debugf("Enqueuing message into batch")
+	//消息添加到批处理
 	r.pendingBatch = append(r.pendingBatch, msg)
 	r.pendingBatchSizeBytes += messageSizeBytes
 	r.pendingCommitters = append(r.pendingCommitters, committer)
 	pending = true
 
 	if uint32(len(r.pendingBatch)) >= r.sharedConfigManager.BatchSize().MaxMessageCount {
-		logger.Debugf("Batch size met, cutting batch")
+		//批次大小满足, 切割批次
 		messageBatch, committerBatch := r.Cut()
 		messageBatches = append(messageBatches, messageBatch)
 		committerBatches = append(committerBatches, committerBatch)

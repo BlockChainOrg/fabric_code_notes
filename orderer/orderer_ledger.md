@@ -110,3 +110,49 @@ func (i *fileLedgerIterator) Next() (*cb.Block, cb.Status)
 func (i *fileLedgerIterator) ReadyChan() <-chan struct{}
 //代码在orderer/ledger/file/impl.go
 ```
+
+## 4、Orderer Ledger工具函数
+
+```go
+//创建块
+func CreateNextBlock(rl Reader, messages []*cb.Envelope) *cb.Block
+func GetBlock(rl Reader, index uint64) *cb.Block
+//地址在orderer/ledger/util.go
+```
+
+func CreateNextBlock(rl Reader, messages []*cb.Envelope) *cb.Block代码如下：
+
+```go
+func CreateNextBlock(rl Reader, messages []*cb.Envelope) *cb.Block {
+	var nextBlockNumber uint64
+	var previousBlockHash []byte
+
+	if rl.Height() > 0 {
+		it, _ := rl.Iterator(&ab.SeekPosition{
+			Type: &ab.SeekPosition_Newest{
+				&ab.SeekNewest{},
+			},
+		})
+		<-it.ReadyChan()
+		block, status := it.Next() //获取前一个最新的块
+		nextBlockNumber = block.Header.Number + 1
+		previousBlockHash = block.Header.Hash() //前一个最新的块的哈希
+	}
+
+	data := &cb.BlockData{
+		Data: make([][]byte, len(messages)),
+	}
+
+	var err error
+	for i, msg := range messages {
+		data.Data[i], err = proto.Marshal(msg) //逐一填充数据
+	}
+
+	block := cb.NewBlock(nextBlockNumber, previousBlockHash)
+	block.Header.DataHash = data.Hash()
+	block.Data = data
+
+	return block
+}
+//地址在orderer/ledger/util.go
+```
