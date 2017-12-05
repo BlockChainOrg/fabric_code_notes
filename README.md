@@ -1,7 +1,8 @@
 # Fabric 1.0源代码笔记
 
-本文基于Fabric v1.0.4版本代码。
+## Fabric 1.0源代码笔记 之 Fabric源码篇
 
+本文基于Fabric v1.0.4版本代码。
 * [Fabric 1.0源代码笔记 之 Peer](peer/README.md)
 	* [peer根命令入口及加载子命令](peer/peer_main.md)
 	* [peer node start命令实现](peer/peer_node_start.md)
@@ -34,11 +35,14 @@
 * [Fabric 1.0源代码笔记 之 gossip（流言算法）](gossip/README.md)
 * [Fabric 1.0源代码笔记 之 scc（系统链码）](scc/README.md)
 * [Fabric 1.0源代码笔记 之 Proposal（提案）](proposal/README.md)
+* [Fabric 1.0源代码笔记 之 policy（背书策略）](policy/README.md)
 * [Fabric 1.0源代码笔记 之 Chaincode（链码）](chaincode/README.md)
 	* [ChaincodeSupport（链码支持服务端）](chaincode/ChaincodeSupport.md)
 * [Fabric 1.0源代码笔记 之 consenter（共识插件）](consenter/README.md)
 	* [filter（过滤器）](consenter/filter.md)
-------
+
+## Fabric 1.0源代码笔记 之 附录篇
+	
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](annex/ecdsa.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)
 * [Fabric 1.0源代码笔记 之 附录-Fabric使用的第三方包](annex/third_party_packages.md)
