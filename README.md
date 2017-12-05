@@ -1,6 +1,6 @@
 # Fabric 1.0源代码笔记
 
-## Fabric 1.0源代码笔记 之 Fabric源码篇
+## ■ Fabric 1.0源代码笔记 之 Fabric源码篇
 
 *本文基于Fabric v1.0.4版本代码。*
 * [Fabric 1.0源代码笔记 之 Peer](peer/README.md)
@@ -46,7 +46,7 @@
 * [Fabric 1.0源代码笔记 之 consenter（共识插件）](consenter/README.md)
 	* [filter（过滤器）](consenter/filter.md)
 
-## Fabric 1.0源代码笔记 之 附录篇
+## ■ Fabric 1.0源代码笔记 之 附录篇
 	
 * [Fabric 1.0源代码笔记 之 附录-ECDSA（椭圆曲线数字签名算法）](annex/ecdsa.md)
 * [Fabric 1.0源代码笔记 之 附录-简称表](annex/abbreviation.md)
