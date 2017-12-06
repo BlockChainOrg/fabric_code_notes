@@ -117,7 +117,7 @@ crypto-config
 59 directories, 21 files
 ```
 
-## 3、组织关系和身份证书目录结构（完整版）
+## 4、组织关系和身份证书目录结构（完整版）
 
 ```bash
 tree crypto-config
