@@ -4,14 +4,109 @@
 
 ChannelConfig代码分布在common/config目录下。目录结构如下：
 
+* channel_util.go，channel相关工具函数。
+* orderer_util.go，orderer（系统通道）相关工具函数。
+* application_util.go，应用通道相关工具函数。
+* consortiums_util.go，联盟相关工具函数。
+
 * api.go，核心接口定义，如Org、ApplicationOrg、Channel、Orderer、Application、Consortium、Consortiums、ValueProposer接口定义。
-* 
 * root.go，Root结构体及方法。
 * channel.go，ChannelGroup结构体及方法。
 * orderer.go，OrdererGroup结构体及方法。
 * application.go，ApplicationGroup结构体及方法。
 
-## 2、核心接口定义
+## 2、工具函数
+
+### 2.1、channel相关工具函数
+
+```go
+//用key和value构建cb.ConfigGroup
+func configGroup(key string, value []byte) *cb.ConfigGroup {
+	result := cb.NewConfigGroup()
+	result.Values[key] = &cb.ConfigValue{
+		Value: value,
+	}
+}
+
+//设置联盟
+//ConsortiumKey = "Consortium"
+//configGroup(ConsortiumKey, utils.MarshalOrPanic(&cb.Consortium{Name: name}))
+func TemplateConsortium(name string) *cb.ConfigGroup
+
+//设置哈希函数
+//HashingAlgorithmKey = "HashingAlgorithm"
+//configGroup(HashingAlgorithmKey, utils.MarshalOrPanic(&cb.HashingAlgorithm{Name: name}))
+func TemplateHashingAlgorithm(name string) *cb.ConfigGroup
+
+//默认哈希函数
+//const defaultHashingAlgorithm = bccsp.SHA256
+//TemplateHashingAlgorithm(defaultHashingAlgorithm)
+func DefaultHashingAlgorithm() *cb.ConfigGroup
+
+//设置块数据哈希结构
+//BlockDataHashingStructureKey = "BlockDataHashingStructure"
+//configGroup(BlockDataHashingStructureKey, utils.MarshalOrPanic(&cb.BlockDataHashingStructure{Width: width}))
+func TemplateBlockDataHashingStructure(width uint32) *cb.ConfigGroup
+
+//默认块数据哈希结构
+//const defaultBlockDataHashingStructureWidth = math.MaxUint32
+//TemplateBlockDataHashingStructure(defaultBlockDataHashingStructureWidth)
+func DefaultBlockDataHashingStructure() *cb.ConfigGroup
+
+//设置Orderer地址
+//OrdererAddressesKey = "OrdererAddresses"
+//configGroup(OrdererAddressesKey, utils.MarshalOrPanic(&cb.OrdererAddresses{Addresses: addresses}))
+func TemplateOrdererAddresses(addresses []string) *cb.ConfigGroup
+
+//默认Orderer地址
+//var defaultOrdererAddresses = []string{"127.0.0.1:7050"}
+//TemplateOrdererAddresses(defaultOrdererAddresses)
+func DefaultOrdererAddresses() *cb.ConfigGroup
+//代码在common/config/channel_util.go
+```
+
+补充cb.ConfigGroup定义：
+
+```go
+type ConfigGroup struct {
+	Version   uint64
+	Groups    map[string]*ConfigGroup
+	Values    map[string]*ConfigValue
+	Policies  map[string]*ConfigPolicy
+	ModPolicy string
+}
+//代码在protos/common/configtx.pb.go
+```
+
+### 2.2、orderer相关工具函数
+
+```go
+func ordererConfigGroup(key string, value []byte) *cb.ConfigGroup
+func TemplateConsensusType(typeValue string) *cb.ConfigGroup
+func TemplateBatchSize(batchSize *ab.BatchSize) *cb.ConfigGroup
+func TemplateBatchTimeout(batchTimeout string) *cb.ConfigGroup
+func TemplateChannelRestrictions(maxChannels uint64) *cb.ConfigGroup
+func TemplateKafkaBrokers(brokers []string) *cb.ConfigGroup
+//代码在common/config/orderer_util.go
+```
+
+### 2.3、应用通道相关工具函数
+
+```go
+func applicationConfigGroup(orgID string, key string, value []byte) *cb.ConfigGroup
+func TemplateAnchorPeers(orgID string, anchorPeers []*pb.AnchorPeer) *cb.ConfigGroup
+//代码在common/config/application_util.go
+```
+
+### 2.4、联盟相关工具函数
+
+```go
+func TemplateConsortiumsGroup() *cb.ConfigGroup
+func TemplateConsortiumChannelCreationPolicy(name string, policy *cb.Policy) *cb.ConfigGroup
+//代码在common/config/consortiums_util.go
+```
+
+## 3、核心接口定义
 
 ```go
 type Org interface { //组织接口
@@ -60,7 +155,7 @@ type ValueProposer interface {
 //代码在common/config/api.go
 ```
 
-## 2、Root结构体及方法
+## 4、Root结构体及方法
 
 ```go
 type Root struct {
@@ -88,9 +183,9 @@ func (r *Root) Consortiums() *ConsortiumsGroup {
 //代码在common/config/root.go
 ```
 
-## 3、ChannelGroup结构体及方法
+## 5、ChannelGroup结构体及方法
 
-### 3.1、ChannelGroup结构体及方法
+### 5.1、ChannelGroup结构体及方法
 
 ```go
 type ChannelGroup struct {
@@ -167,7 +262,7 @@ type Consortium struct {
 //代码在protos/common/configuration.pb.go
 ```
 
-### 3.2、Proposer结构体及方法
+### 5.2、Proposer结构体及方法
 
 ```go
 type Proposer struct {
@@ -184,7 +279,7 @@ func (p *Proposer) CommitProposals(tx interface{})
 //代码在common/config/proposer.go
 ```
 
-### 3.3、OrdererGroup结构体及方法
+### 5.3、OrdererGroup结构体及方法
 
 ```go
 type OrdererGroup struct {
@@ -239,7 +334,7 @@ func brokerEntrySeemsValid(broker string) bool
 //代码在common/config/orderer.go
 ```
 
-### 3.4、ApplicationGroup结构体及方法
+### 5.4、ApplicationGroup结构体及方法
 
 ```go
 //代码在common/config/application.go

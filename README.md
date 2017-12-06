@@ -48,6 +48,7 @@
 * [Fabric 1.0源代码笔记 之 cryptogen（生成组织关系和身份证书）](code/cryptogen/README.md)
 * [Fabric 1.0源代码笔记 之 configtx（配置交易）](code/configtx/README.md)
 	* [configtxgen（生成通道配置）](code/configtx/configtxgen.md)
+	* [genesis（创世区块）](code/configtx/genesis.md)
 	* [ChannelConfig（通道配置）](code/configtx/ChannelConfig.md)
 
 ## ■ Fabric 1.0源代码笔记 之 附录篇

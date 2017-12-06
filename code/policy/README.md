@@ -6,7 +6,9 @@ policy代码分布在core/policy、core/policyprovider、common/policies目录�
 
 * core/policy/policy.go，PolicyChecker接口定义及实现、PolicyCheckerFactory接口定义。
 * core/policyprovider/provider.go，PolicyChecker工厂默认实现。
-* common/policies目录，ChannelPolicyManagerGetter接口及实现。
+* common/policies目录
+	* policy.go，ChannelPolicyManagerGetter接口及实现。
+	* implicitmeta_util.go，通道策略工具函数。
 
 ## 2、PolicyChecker工厂
 
@@ -172,3 +174,35 @@ type implicitMetaPolicy struct {
 }
 //代码在common/policies/implicitmeta.go
 ```
+
+## 5、通道策略工具函数
+
+```go
+type ImplicitMetaPolicy_Rule int32
+const (
+	ImplicitMetaPolicy_ANY      ImplicitMetaPolicy_Rule = 0 //任意
+	ImplicitMetaPolicy_ALL      ImplicitMetaPolicy_Rule = 1 //所有
+	ImplicitMetaPolicy_MAJORITY ImplicitMetaPolicy_Rule = 2 //大多数
+)
+//代码在protos/common/policies.pb.go
+```
+
+```go
+//构造cb.Policy
+func ImplicitMetaPolicyWithSubPolicy(subPolicyName string, rule cb.ImplicitMetaPolicy_Rule) *cb.ConfigPolicy
+func TemplateImplicitMetaPolicyWithSubPolicy(path []string, policyName string, subPolicyName string, rule cb.ImplicitMetaPolicy_Rule) *cb.ConfigGroup
+
+//调取TemplateImplicitMetaPolicyWithSubPolicy(path, policyName, policyName, rule)
+func TemplateImplicitMetaPolicy(path []string, policyName string, rule cb.ImplicitMetaPolicy_Rule) *cb.ConfigGroup
+
+//任意，TemplateImplicitMetaPolicy(path, policyName, cb.ImplicitMetaPolicy_ANY)
+func TemplateImplicitMetaAnyPolicy(path []string, policyName string) *cb.ConfigGroup
+
+//所有，TemplateImplicitMetaPolicy(path, policyName, cb.ImplicitMetaPolicy_ALL)
+func TemplateImplicitMetaAllPolicy(path []string, policyName string) *cb.ConfigGroup
+
+//大多数，TemplateImplicitMetaPolicy(path, policyName, cb.ImplicitMetaPolicy_MAJORITY)
+func TemplateImplicitMetaMajorityPolicy(path []string, policyName string) *cb.ConfigGroup
+//代码在common/policies/implicitmeta_util.go
+```
+
