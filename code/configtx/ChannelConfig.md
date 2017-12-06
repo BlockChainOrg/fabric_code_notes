@@ -1,0 +1,1 @@
+# Fabric 1.0源代码笔记 之 configtx（配置交易） #ChannelConfig（通道配置）

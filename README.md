@@ -45,7 +45,8 @@
 	* [ChaincodeSupport（链码支持服务端）](code/chaincode/ChaincodeSupport.md)
 * [Fabric 1.0源代码笔记 之 consenter（共识插件）](code/consenter/README.md)
 	* [filter（过滤器）](code/consenter/filter.md)
-* [Fabric 1.0源代码笔记 之 configtx（通道配置）](code/configtx/README.md)
+* [Fabric 1.0源代码笔记 之 configtx（配置交易）](code/configtx/README.md)
+	* [ChannelConfig（通道配置）](code/configtx/ChannelConfig.md)
 
 ## ■ Fabric 1.0源代码笔记 之 附录篇
 	
