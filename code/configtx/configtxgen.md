@@ -4,9 +4,9 @@
 
 configtxgen，用于生成通道配置，具体有如下三种用法：
 
-* 生成Orderer服务启动的初始区块
+* 生成Orderer服务启动的初始区块（即系统通道的创世区块文件）
 	* configtxgen -profile TwoOrgsOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
-* 生成新建应用通道的配置交易
+* 生成新建应用通道的配置交易（即用于创建应用通道的配置交易文件）
 	* configtxgen -profile TwoOrgsChannel -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID mychannel
 * 生成锚节点配置更新文件
 	* configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate ./channel-artifacts/Org1MSPanchors.tx -channelID mychannel -asOrg Org1MSP
@@ -366,7 +366,7 @@ func main() {
 //代码在common/configtx/tool/configtxgen/main.go
 ```
 
-### 5.2、doOutputBlock（生成Orderer服务启动的初始区块）
+### 5.2、doOutputBlock（生成Orderer服务启动的初始区块，即系统通道的初始区块文件）
 
 ```go
 func doOutputBlock(config *genesisconfig.Profile, channelID string, outputBlock string) error {
@@ -378,8 +378,86 @@ func doOutputBlock(config *genesisconfig.Profile, channelID string, outputBlock 
 //代码在common/configtx/tool/configtxgen/main.go
 ```
 
-genesis更详细内容，参考：[Fabric 1.0源代码笔记 之 configtx（配置交易） #genesis（创世区块）](genesis.md)
+genesis更详细内容，参考：[Fabric 1.0源代码笔记 之 configtx（配置交易） #genesis（系统通道创世区块）](genesis.md)
 
 ### 5.3、doOutputChannelCreateTx（生成新建应用通道的配置交易）
 
+```go
+func doOutputChannelCreateTx(conf *genesisconfig.Profile, channelID string, outputChannelCreateTx string) error {
+	var orgNames []string
+	for _, org := range conf.Application.Organizations {
+		orgNames = append(orgNames, org.Name)
+	}
+	configtx, err := configtx.MakeChainCreationTransaction(channelID, conf.Consortium, nil, orgNames...)
+	err = ioutil.WriteFile(outputChannelCreateTx, utils.MarshalOrPanic(configtx), 0644)
+	return nil
+}
+//代码在common/configtx/tool/configtxgen/main.go
+```
+
 ### 5.4、doOutputAnchorPeersUpdate（生成锚节点配置更新文件）
+
+```go
+func doOutputAnchorPeersUpdate(conf *genesisconfig.Profile, channelID string, outputAnchorPeersUpdate string, asOrg string) error {
+	var org *genesisconfig.Organization
+	for _, iorg := range conf.Application.Organizations {
+		if iorg.Name == asOrg {
+			org = iorg
+		}
+	}
+	anchorPeers := make([]*pb.AnchorPeer, len(org.AnchorPeers))
+	for i, anchorPeer := range org.AnchorPeers {
+		anchorPeers[i] = &pb.AnchorPeer{
+			Host: anchorPeer.Host,
+			Port: int32(anchorPeer.Port),
+		}
+	}
+
+	configGroup := config.TemplateAnchorPeers(org.Name, anchorPeers)
+	configGroup.Groups[config.ApplicationGroupKey].Groups[org.Name].Values[config.AnchorPeersKey].ModPolicy = mspconfig.AdminsPolicyKey
+	configUpdate := &cb.ConfigUpdate{
+		ChannelId: channelID,
+		WriteSet:  configGroup,
+		ReadSet:   cb.NewConfigGroup(),
+	}
+
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey] = cb.NewConfigGroup()
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].Version = 1
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].ModPolicy = mspconfig.AdminsPolicyKey
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].Groups[org.Name] = cb.NewConfigGroup()
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Values[config.MSPKey] = &cb.ConfigValue{}
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Policies[mspconfig.ReadersPolicyKey] = &cb.ConfigPolicy{}
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Policies[mspconfig.WritersPolicyKey] = &cb.ConfigPolicy{}
+	configUpdate.ReadSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Policies[mspconfig.AdminsPolicyKey] = &cb.ConfigPolicy{}
+
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Version = 1
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].ModPolicy = mspconfig.AdminsPolicyKey
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Version = 1
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Groups[org.Name].ModPolicy = mspconfig.AdminsPolicyKey
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Values[config.MSPKey] = &cb.ConfigValue{}
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Policies[mspconfig.ReadersPolicyKey] = &cb.ConfigPolicy{}
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Policies[mspconfig.WritersPolicyKey] = &cb.ConfigPolicy{}
+	configUpdate.WriteSet.Groups[config.ApplicationGroupKey].Groups[org.Name].Policies[mspconfig.AdminsPolicyKey] = &cb.ConfigPolicy{}
+
+	configUpdateEnvelope := &cb.ConfigUpdateEnvelope{
+		ConfigUpdate: utils.MarshalOrPanic(configUpdate),
+	}
+
+	update := &cb.Envelope{
+		Payload: utils.MarshalOrPanic(&cb.Payload{
+			Header: &cb.Header{
+				ChannelHeader: utils.MarshalOrPanic(&cb.ChannelHeader{
+					ChannelId: channelID,
+					Type:      int32(cb.HeaderType_CONFIG_UPDATE),
+				}),
+			},
+			Data: utils.MarshalOrPanic(configUpdateEnvelope),
+		}),
+	}
+
+	err := ioutil.WriteFile(outputAnchorPeersUpdate, utils.MarshalOrPanic(update), 0644)
+	return nil
+}
+
+//代码在common/configtx/tool/configtxgen/main.go
+```

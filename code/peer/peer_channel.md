@@ -194,3 +194,17 @@ var proposalResp *pb.ProposalResponse
 proposalResp, err = cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
 //代码在peer/channel/join.go
 ```
+
+## 3、peer channel update（更新锚节点配置）
+
+```go
+cf, err = InitCmdFactory(EndorserNotRequired, OrdererRequired)
+fileData, err := ioutil.ReadFile(channelTxFile)
+ctxEnv, err := utils.UnmarshalEnvelope(fileData)
+sCtxEnv, err := sanityCheckAndSignConfigTx(ctxEnv)
+var broadcastClient common.BroadcastClient
+broadcastClient, err = cf.BroadcastFactory()
+defer broadcastClient.Close()
+return broadcastClient.Send(sCtxEnv)
+//代码在peer/channel
+```
