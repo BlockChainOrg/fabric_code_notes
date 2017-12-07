@@ -80,7 +80,7 @@ func joinChain(chainID string, block *common.Block) pb.Response {
 //代码在core/scc/cscc/configure.go
 ```
 
-#### 5.1.2、创建Chain（或channel）
+#### 5.1.1、创建Chain（或channel）
 
 peer.CreateChainFromBlock(block)代码如下：
 
@@ -99,8 +99,8 @@ createChain(cid, l, cb)代码如下：
 ```go
 func createChain(cid string, ledger ledger.PeerLedger, cb *common.Block) error {
 	envelopeConfig, err := utils.ExtractEnvelope(cb, 0) //获取配置Envelope
-	configtxInitializer := configtx.NewInitializer() //配置初始化
-	gossipEventer := service.GetGossipService().NewConfigEventer()
+	configtxInitializer := configtx.NewInitializer() //type initializer struct
+	gossipEventer := service.GetGossipService().NewConfigEventer() //获取gossipServiceInstance
 
 	gossipCallbackWrapper := func(cm configtxapi.Manager) {
 		ac, ok := configtxInitializer.ApplicationConfig()
@@ -171,5 +171,15 @@ func createChain(cid string, ledger ledger.PeerLedger, cb *common.Block) error {
 	return nil
 }
 //代码在core/peer/peer.go
+```
+
+补充initializer：
+
+```go
+type initializer struct {
+	*resources
+	ppr *policyProposerRoot
+}
+//代码在common/configtx/initializer.go
 ```
 

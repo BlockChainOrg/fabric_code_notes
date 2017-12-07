@@ -149,7 +149,7 @@ type Chain interface {
 //代码在orderer/multichain/chainsupport.go
 ```
 
-Consenter和Chain更详细内容，参考：[Fabric 1.0源代码笔记 之 consenter（共识插件）](consenter/filter.md)
+Consenter和Chain更详细内容，参考：[Fabric 1.0源代码笔记 之 consenter（共识插件）](../consenter/README.md)
 
 ### 3.2、ChainSupport和ConsenterSupport接口实现
 
