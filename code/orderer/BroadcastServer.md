@@ -89,9 +89,19 @@ type handlerImpl struct {
 	sm SupportManager
 }
 
+func NewHandlerImpl(sm SupportManager) Handler {
+	return &handlerImpl{
+		sm: sm,
+	}
+}
+
 type SupportManager interface {
 	ConfigUpdateProcessor
 	GetChain(chainID string) (Support, bool)
+}
+
+type ConfigUpdateProcessor interface { //处理通道配置更新
+	Process(envConfigUpdate *cb.Envelope) (*cb.Envelope, error)
 }
 //代码在orderer/common/broadcast/broadcast.go
 ```
@@ -183,7 +193,6 @@ func (p *Processor) Process(envConfigUpdate *cb.Envelope) (*cb.Envelope, error) 
 #### 3.3.3、其他消息类型或channel消息处理后，接受消息并加入排序
 
 ```go
-//
 support, ok := bh.sm.GetChain(chdr.ChannelId) //获取chainSupport
 _, filterErr := support.Filters().Apply(msg) //filter.RuleSet.Apply方法
 //调取Chain.Enqueue方法，接受消息，加入排序
