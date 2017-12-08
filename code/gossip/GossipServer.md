@@ -10,6 +10,7 @@ GossipServer相关代码，分布在protos/gossip、gossip/comm目录下。目�
 	* comm.go，Comm接口定义。
 	* conn.go，connFactory接口定义，以及connectionStore结构体及方法。
 	* comm_impl.go，commImpl结构体及方法（同时实现GossipServer接口/Comm接口/connFactory接口）。
+	* demux.go，ChannelDeMultiplexer结构体及方法。
 
 ## 2、GossipClient接口定义及实现
 
@@ -235,19 +236,23 @@ type commImpl struct {
 ### 5.2、commImpl结构体方法
 
 ```go
+//conn.serviceConnection()，启动连接服务
 func (c *commImpl) GossipStream(stream proto.Gossip_GossipStreamServer) error
+//return &proto.Empty{}
 func (c *commImpl) Ping(context.Context, *proto.Empty) (*proto.Empty, error)
 
 func (c *commImpl) GetPKIid() common.PKIidType
+//向指定节点发送消息
 func (c *commImpl) Send(msg *proto.SignedGossipMessage, peers ...*RemotePeer)
+//探测远程节点是否有响应，_, err = cl.Ping(context.Background(), &proto.Empty{})
 func (c *commImpl) Probe(remotePeer *RemotePeer) error
+//握手验证远程节点，_, err = cl.Ping(context.Background(), &proto.Empty{})
 func (c *commImpl) Handshake(remotePeer *RemotePeer) (api.PeerIdentityType, error)
 func (c *commImpl) Accept(acceptor common.MessageAcceptor) <-chan proto.ReceivedMessage
 func (c *commImpl) PresumedDead() <-chan common.PKIidType
 func (c *commImpl) CloseConn(peer *RemotePeer)
 func (c *commImpl) Stop()
 
-func SetDialTimeout(timeout time.Duration)
 //创建并启动gRPC Server，以及注册GossipServer实例
 func NewCommInstanceWithServer(port int, idMapper identity.Mapper, peerIdentity api.PeerIdentityType,
 //将GossipServer实例注册至peerServer
@@ -257,10 +262,11 @@ func readWithTimeout(stream interface{}, timeout time.Duration, address string) 
 //创建gRPC Server，grpc.NewServer(serverOpts...)
 func createGRPCLayer(port int) (*grpc.Server, net.Listener, api.PeerSecureDialOpts, []byte)
 
-func (c *commImpl) SetDialOpts(opts ...grpc.DialOption)
 //创建与服务端连接
 func (c *commImpl) createConnection(endpoint string, expectedPKIID common.PKIidType) (*connection, error)
+//向指定节点发送消息
 func (c *commImpl) sendToEndpoint(peer *RemotePeer, msg *proto.SignedGossipMessage)
+//return atomic.LoadInt32(&c.stopping) == int32(1)
 func (c *commImpl) isStopping() bool
 func (c *commImpl) emptySubscriptions()
 func (c *commImpl) authenticateRemotePeer(stream stream) (*proto.ConnectionInfo, error)
@@ -447,19 +453,91 @@ type connectionStore struct {
 	isClosing        bool                     // whether this connection store is shutting down
 	connFactory      connFactory              // creates a connection to remote peer
 	sync.RWMutex                              // synchronize access to shared variables
-	pki2Conn         map[string]*connection   // mapping between pkiID to connections
+	pki2Conn         map[string]*connection   //connection map, key为pkiID，value为connection
 	destinationLocks map[string]*sync.RWMutex //mapping between pkiIDs and locks,
 	// used to prevent concurrent connection establishment to the same remote endpoint
 }
 
+//构造connectionStore
 func newConnStore(connFactory connFactory, logger *logging.Logger) *connectionStore
+//从connection map中获取连接，如无则创建并启动连接，并写入connection map中
 func (cs *connectionStore) getConnection(peer *RemotePeer) (*connection, error)
+//连接数量
 func (cs *connectionStore) connNum() int
+//关闭指定连接
 func (cs *connectionStore) closeConn(peer *RemotePeer)
+//关闭所有连接
 func (cs *connectionStore) shutdown()
 func (cs *connectionStore) onConnected(serverStream proto.Gossip_GossipStreamServer, connInfo *proto.ConnectionInfo) *connection
+//注册连接
 func (cs *connectionStore) registerConn(connInfo *proto.ConnectionInfo, serverStream proto.Gossip_GossipStreamServer) *connection
+//关闭指定连接
 func (cs *connectionStore) closeByPKIid(pkiID common.PKIidType) 
 //代码在gossip/comm/conn.go
 ```
 
+#### 6.2.1、func (cs *connectionStore) getConnection(peer *RemotePeer) (*connection, error)
+
+```go
+func (cs *connectionStore) getConnection(peer *RemotePeer) (*connection, error) {
+	cs.RLock()
+	isClosing := cs.isClosing
+	cs.RUnlock()
+
+	pkiID := peer.PKIID
+	endpoint := peer.Endpoint
+
+	cs.Lock()
+	destinationLock, hasConnected := cs.destinationLocks[string(pkiID)]
+	if !hasConnected {
+		destinationLock = &sync.RWMutex{}
+		cs.destinationLocks[string(pkiID)] = destinationLock
+	}
+	cs.Unlock()
+
+	destinationLock.Lock()
+	cs.RLock()
+	//从connection map中获取
+	conn, exists := cs.pki2Conn[string(pkiID)]
+	if exists {
+		cs.RUnlock()
+		destinationLock.Unlock()
+		return conn, nil
+	}
+	cs.RUnlock()
+
+	//创建连接
+	createdConnection, err := cs.connFactory.createConnection(endpoint, pkiID)
+	destinationLock.Unlock()
+
+
+	conn = createdConnection
+	cs.pki2Conn[string(createdConnection.pkiID)] = conn
+	go conn.serviceConnection() //启动连接的消息接收处理、以及向对方节点发送消息
+
+	return conn, nil
+}
+//代码在gossip/comm/conn.go
+```
+
+## 7、ChannelDeMultiplexer结构体及方法（多路复用器）
+
+```go
+type ChannelDeMultiplexer struct {
+	channels []*channel
+	lock     *sync.RWMutex
+	closed   int32
+}
+
+//构造ChannelDeMultiplexer
+func NewChannelDemultiplexer() *ChannelDeMultiplexer
+//atomic.LoadInt32(&m.closed) == int32(1)
+func (m *ChannelDeMultiplexer) isClosed() bool
+//关闭
+func (m *ChannelDeMultiplexer) Close() 
+//添加通道
+func (m *ChannelDeMultiplexer) AddChannel(predicate common.MessageAcceptor) chan interface{} 
+//挨个通道发送消息
+func (m *ChannelDeMultiplexer) DeMultiplex(msg interface{}) 
+//代码在
+```

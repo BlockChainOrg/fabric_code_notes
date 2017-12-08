@@ -2,8 +2,6 @@
 
 ## 1、DeliverClient概述
 
-目前仅peer channel fetch命令中使用了DeliverClient。
-
 DeliverClient代码分布如下：
 
 * peer/channel/deliverclient.go，deliverClientIntf接口定义及实现，以及DeliverClient工具函数。

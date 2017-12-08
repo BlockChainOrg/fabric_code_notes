@@ -383,6 +383,87 @@ peer.Initialize(func(cid string) { //初始化所有链
 //代码在peer/node/start.go
 ```
 
+func Initialize(init func(string))代码如下：
+
+```go
+func Initialize(init func(string)) {
+	chainInitializer = init
+
+	var cb *common.Block
+	var ledger ledger.PeerLedger
+	ledgermgmt.Initialize()
+	ledgerIds, err := ledgermgmt.GetLedgerIDs()
+	for _, cid := range ledgerIds {
+		ledger, err = ledgermgmt.OpenLedger(cid)
+		cb, err = getCurrConfigBlockFromLedger(ledger) //获取最新的配置块
+		err = createChain(cid, ledger, cb)
+		InitChain(cid) //即调用chainInitializer(cid)，即scc.DeploySysCCs(cid)
+	}
+}
+//代码在core/peer/peer.go
+```
+
+createChain(cid, ledger, cb)代码如下：
+
+```go
+func createChain(cid string, ledger ledger.PeerLedger, cb *common.Block) error {
+	envelopeConfig, err := utils.ExtractEnvelope(cb, 0) //获取配置交易
+	configtxInitializer := configtx.NewInitializer() //构造initializer
+	gossipEventer := service.GetGossipService().NewConfigEventer() //获取gossipServiceInstance，并构造configEventer
+
+	gossipCallbackWrapper := func(cm configtxapi.Manager) {
+		ac, ok := configtxInitializer.ApplicationConfig()
+		gossipEventer.ProcessConfigUpdate(&chainSupport{
+			Manager:     cm,
+			Application: ac,
+		})
+		//验证可疑节点身份，并关闭无效链接
+		service.GetGossipService().SuspectPeers(func(identity api.PeerIdentityType) bool {
+			return true
+		})
+	}
+
+	trustedRootsCallbackWrapper := func(cm configtxapi.Manager) {
+		updateTrustedRoots(cm)
+	}
+
+	configtxManager, err := configtx.NewManagerImpl(
+		envelopeConfig,
+		configtxInitializer,
+		[]func(cm configtxapi.Manager){gossipCallbackWrapper, trustedRootsCallbackWrapper},
+	)
+	mspmgmt.XXXSetMSPManager(cid, configtxManager.MSPManager())
+
+	ac, ok := configtxInitializer.ApplicationConfig()
+	cs := &chainSupport{
+		Manager:     configtxManager,
+		Application: ac, // TODO, refactor as this is accessible through Manager
+		ledger:      ledger,
+	}
+
+	c := committer.NewLedgerCommitterReactive(ledger, txvalidator.NewTxValidator(cs), func(block *common.Block) error {
+		chainID, err := utils.GetChainIDFromBlock(block)
+		if err != nil {
+			return err
+		}
+		return SetCurrConfigBlock(block, chainID)
+	})
+
+	ordererAddresses := configtxManager.ChannelConfig().OrdererAddresses()
+	service.GetGossipService().InitializeChannel(cs.ChainID(), c, ordererAddresses)
+
+	chains.Lock()
+	defer chains.Unlock()
+	chains.list[cid] = &chain{
+		cs:        cs,
+		cb:        cb,
+		committer: c,
+	}
+	return nil
+}
+//代码在core/peer/peer.go
+```
+
 scc更详细内容参考：[Fabric 1.0源代码笔记 之 scc（系统链码）](../scc/README.md)
 
 ## 8、启动peerServer和ehubGrpcServer，并监控系统信号，以及启动Go自带的profiling支持进行调试

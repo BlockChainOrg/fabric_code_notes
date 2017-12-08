@@ -35,9 +35,9 @@ Peer核心代码在peer目录下，其他相关代码分布在core/peer和protos
 * [Fabric 1.0源代码笔记 之 Peer #peer channel命令及子命令实现](peer_channel.md)
 * [Fabric 1.0源代码笔记 之 Peer #peer chaincode命令及子命令实现](peer_chaincode.md)
 * [Fabric 1.0源代码笔记 之 Peer #EndorserClient（Endorser客户端）](EndorserClient.md)
-* [Fabric 1.0源代码笔记 之 Peer #BroadcastClient（Broadcast客户端）](BroadcastClient.md)
-* [Fabric 1.0源代码笔记 之 Peer #DeliverClient（Deliver客户端）](DeliverClient.md)
 * [Fabric 1.0源代码笔记 之 Peer #EndorserServer（Endorser服务端）](EndorserServer.md)
+* [Fabric 1.0源代码笔记 之 Peer #BroadcastClient（Broadcast客户端）](BroadcastClient.md)
+
 
 ## 2、Peer配置相关工具函数
 

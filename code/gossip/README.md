@@ -86,8 +86,11 @@ type gossipServiceImpl struct {
 func InitGossipService(peerIdentity []byte, endpoint string, s *grpc.Server, mcs api.MessageCryptoService,secAdv api.SecurityAdvisor, secureDialOpts api.PeerSecureDialOpts, bootPeers ...string) error
 //初始化Gossip Service
 func InitGossipServiceCustomDeliveryFactory(peerIdentity []byte, endpoint string, s *grpc.Server,factory DeliveryServiceFactory, mcs api.MessageCryptoService, secAdv api.SecurityAdvisor,secureDialOpts api.PeerSecureDialOpts, bootPeers ...string) error
+//获取gossipServiceInstance
 func GetGossipService() GossipService 
+//调取 newConfigEventer(g)
 func (g *gossipServiceImpl) NewConfigEventer() ConfigProcessor 
+//初始化通道
 func (g *gossipServiceImpl) InitializeChannel(chainID string, committer committer.Committer, endpoints []string) 
 func (g *gossipServiceImpl) configUpdated(config Config) 
 func (g *gossipServiceImpl) GetBlock(chainID string, index uint64) *common.Block 
@@ -161,6 +164,35 @@ func (g *gossipServiceImpl) Stop() {
 		g.deliveryService.Stop()
 	}
 }
+//代码在gossip/service/gossip_service.go
+```
+
+#### 2.2.3、func (g *gossipServiceImpl) InitializeChannel(chainID string, committer committer.Committer, endpoints []string) 
+
+```go
+func (g *gossipServiceImpl) InitializeChannel(chainID string, committer committer.Committer, endpoints []string) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	g.chains[chainID] = state.NewGossipStateProvider(chainID, g, committer, g.mcs)
+	if g.deliveryService == nil {
+		var err error
+		g.deliveryService, err = g.deliveryFactory.Service(gossipServiceInstance, endpoints, g.mcs)
+	}
+	if g.deliveryService != nil {
+		//如下两者只可以二选一
+		leaderElection := viper.GetBool("peer.gossip.useLeaderElection") //是否动态选举代表节点
+		isStaticOrgLeader := viper.GetBool("peer.gossip.orgLeader") //是否指定本节点为组织代表节点
+
+		if leaderElection {
+			//选举代表节点
+			g.leaderElection[chainID] = g.newLeaderElectionComponent(chainID, g.onStatusChangeFactory(chainID, committer))
+		} else if isStaticOrgLeader {
+			//如果指定本节点为代表节点，则启动Deliver client
+			g.deliveryService.StartDeliverForChannel(chainID, committer, func() {})
+		}
+}
+
 //代码在gossip/service/gossip_service.go
 ```
 
@@ -406,28 +438,62 @@ func NewGossipService(conf *Config, s *grpc.Server, secAdvisor api.SecurityAdvis
 		includeIdentityPeriod: time.Now().Add(conf.PublishCertPeriod),
 	}
 	g.stateInfoMsgStore = g.newStateInfoMsgStore()
-
 	g.chanState = newChannelState(g)
 	g.emitter = newBatchingEmitter(conf.PropagateIterations,
 		conf.MaxPropagationBurstSize, conf.MaxPropagationBurstLatency,
 		g.sendGossipBatch)
-
 	g.discAdapter = g.newDiscoveryAdapter()
 	g.disSecAdap = g.newDiscoverySecurityAdapter()
 	g.disc = discovery.NewDiscoveryService(g.selfNetworkMember(), g.discAdapter, g.disSecAdap, g.disclosurePolicy)
-	g.logger.Info("Creating gossip service with self membership of", g.selfNetworkMember())
-
 	g.certStore = newCertStore(g.createCertStorePuller(), idMapper, selfIdentity, mcs)
-
-	if g.conf.ExternalEndpoint == "" {
-		g.logger.Warning("External endpoint is empty, peer will not be accessible outside of its organization")
-	}
 
 	go g.start()
 	go g.periodicalIdentityValidationAndExpiration()
 	go g.connect2BootstrapPeers()
-
 	return g
+}
+//代码在gossip/gossip/gossip_impl.go
+```
+
+#### 4.3.3、go g.start()
+
+```go
+func (g *gossipServiceImpl) start() {
+	go g.syncDiscovery()
+	go g.handlePresumedDead()
+
+	msgSelector := func(msg interface{}) bool {
+		gMsg, isGossipMsg := msg.(proto.ReceivedMessage)
+		if !isGossipMsg {
+			return false
+		}
+		isConn := gMsg.GetGossipMessage().GetConn() != nil
+		isEmpty := gMsg.GetGossipMessage().GetEmpty() != nil
+		return !(isConn || isEmpty)
+	}
+
+	incMsgs := g.comm.Accept(msgSelector)
+	go g.acceptMessages(incMsgs)
+}
+//代码在gossip/gossip/gossip_impl.go
+```
+
+go g.acceptMessages(incMsgs)代码如下：
+
+```go
+func (g *gossipServiceImpl) acceptMessages(incMsgs <-chan proto.ReceivedMessage) {
+	defer g.logger.Debug("Exiting")
+	g.stopSignal.Add(1)
+	defer g.stopSignal.Done()
+	for {
+		select {
+		case s := <-g.toDieChan:
+			g.toDieChan <- s
+			return
+		case msg := <-incMsgs:
+			g.handleMessage(msg)
+		}
+	}
 }
 //代码在gossip/gossip/gossip_impl.go
 ```

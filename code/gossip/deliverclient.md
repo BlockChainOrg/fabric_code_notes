@@ -1,0 +1,1 @@
+# Fabric 1.0源代码笔记 之 gossip（流言算法） #deliverclient（deliver客户端）
