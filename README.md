@@ -33,6 +33,7 @@
 	* [historydb（历史数据库）](code/ledger/historydb.md)
 * [Fabric 1.0源代码笔记 之 events（事件服务）](code/events/README.md)
 * [Fabric 1.0源代码笔记 之 gossip（流言算法）](code/gossip/README.md)
+	* [GossipServer（Gossip服务端）](code/gossip/GossipServer.md)
 * [Fabric 1.0源代码笔记 之 scc（系统链码）](code/scc/README.md)
 	* [cscc（通道相关）](code/scc/cscc.md)
 * [Fabric 1.0源代码笔记 之 Proposal（提案）](code/proposal/README.md)

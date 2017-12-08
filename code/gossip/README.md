@@ -17,12 +17,17 @@ gossip代码，分布在gossip、peer/gossip目录下，目录结构如下：
 
 * gossip目录：
 	* service目录，GossipService接口定义及实现。
+	* integration目录，NewGossipComponent工具函数。
+	* gossip目录，Gossip接口定义及实现。
+	* comm目录，GossipServer接口实现。
 	* api目录：消息加密服务接口定义。
 		* crypto.go，MessageCryptoService接口定义。
 		* channel.go，SecurityAdvisor接口定义。
 * peer/gossip目录：
 	* mcs.go，MessageCryptoService接口实现，即mspMessageCryptoService结构体及方法。
 	* sa.go，SecurityAdvisor接口实现，即mspSecurityAdvisor结构体及方法。
+	
+GossipServer更详细内容，参考：[Fabric 1.0源代码笔记 之 gossip（流言算法） #GossipServer（Gossip服务端）](GossipServer.md)
 
 ## 2、GossipService接口定义及实现
 
@@ -66,8 +71,8 @@ type gossipSvc gossip.Gossip
 
 type gossipServiceImpl struct {
 	gossipSvc
-	chains          map[string]state.GossipStateProvider
-	leaderElection  map[string]election.LeaderElectionService
+	chains          map[string]state.GossipStateProvider //链
+	leaderElection  map[string]election.LeaderElectionService //选举服务
 	deliveryService deliverclient.DeliverService
 	deliveryFactory DeliveryServiceFactory
 	lock            sync.RWMutex
@@ -87,6 +92,7 @@ func (g *gossipServiceImpl) InitializeChannel(chainID string, committer committe
 func (g *gossipServiceImpl) configUpdated(config Config) 
 func (g *gossipServiceImpl) GetBlock(chainID string, index uint64) *common.Block 
 func (g *gossipServiceImpl) AddPayload(chainID string, payload *proto.Payload) error 
+//停止gossip服务
 func (g *gossipServiceImpl) Stop() 
 func (g *gossipServiceImpl) newLeaderElectionComponent(chainID string, callback func(bool)) election.LeaderElectionService 
 func (g *gossipServiceImpl) amIinChannel(myOrg string, config Config) bool 
@@ -95,7 +101,7 @@ func orgListFromConfig(config Config) []string
 //代码在gossip/service/gossip_service.go
 ```
 
-### 2.2.1、func InitGossipService(peerIdentity []byte, endpoint string, s *grpc.Server, mcs api.MessageCryptoService,secAdv api.SecurityAdvisor, secureDialOpts api.PeerSecureDialOpts, bootPeers ...string) error
+#### 2.2.1、func InitGossipService(peerIdentity []byte, endpoint string, s *grpc.Server, mcs api.MessageCryptoService,secAdv api.SecurityAdvisor, secureDialOpts api.PeerSecureDialOpts, bootPeers ...string) error
 
 ```go
 func InitGossipService(peerIdentity []byte, endpoint string, s *grpc.Server, mcs api.MessageCryptoService,
@@ -134,8 +140,299 @@ func InitGossipServiceCustomDeliveryFactory(peerIdentity []byte, endpoint string
 
 //代码在gossip/service/gossip_service.go
 ```
+
+#### 2.2.2、func (g *gossipServiceImpl) Stop()
+
+```go
+func (g *gossipServiceImpl) Stop() {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	for _, ch := range g.chains {
+		logger.Info("Stopping chain", ch)
+		ch.Stop()
+	}
+
+	for chainID, electionService := range g.leaderElection {
+		logger.Infof("Stopping leader election for %s", chainID)
+		electionService.Stop()
+	}
+	g.gossipSvc.Stop()
+	if g.deliveryService != nil {
+		g.deliveryService.Stop()
+	}
+}
+//代码在gossip/service/gossip_service.go
+```
+
+## 3、NewGossipComponent工具函数
+
+```go
+func NewGossipComponent(peerIdentity []byte, endpoint string, s *grpc.Server,
+	secAdv api.SecurityAdvisor, cryptSvc api.MessageCryptoService, idMapper identity.Mapper,
+	secureDialOpts api.PeerSecureDialOpts, bootPeers ...string) (gossip.Gossip, error) {
+
+	//peer.gossip.externalEndpoint为节点被组织外节点感知时的地址
+	externalEndpoint := viper.GetString("peer.gossip.externalEndpoint")
+
+	//endpoint，取自peer.address，即节点对外服务的地址
+	//bootPeers取自peer.gossip.bootstrap，即启动节点后所进行gossip连接的初始节点，可为多个
+	conf, err := newConfig(endpoint, externalEndpoint, bootPeers...)
+	gossipInstance := gossip.NewGossipService(conf, s, secAdv, cryptSvc, idMapper,
+		peerIdentity, secureDialOpts)
+
+	return gossipInstance, nil
+}
+
+func newConfig(selfEndpoint string, externalEndpoint string, bootPeers ...string) (*gossip.Config, error) {
+	_, p, err := net.SplitHostPort(selfEndpoint)
+	port, err := strconv.ParseInt(p, 10, 64) //节点对外服务的端口
+
+	var cert *tls.Certificate
+	if viper.GetBool("peer.tls.enabled") {
+		certTmp, err := tls.LoadX509KeyPair(config.GetPath("peer.tls.cert.file"), config.GetPath("peer.tls.key.file"))
+		cert = &certTmp
+	}
+
+	return &gossip.Config{
+		BindPort:                   int(port),
+		BootstrapPeers:             bootPeers,
+		ID:                         selfEndpoint,
+		MaxBlockCountToStore:       util.GetIntOrDefault("peer.gossip.maxBlockCountToStore", 100),
+		MaxPropagationBurstLatency: util.GetDurationOrDefault("peer.gossip.maxPropagationBurstLatency", 10*time.Millisecond),
+		MaxPropagationBurstSize:    util.GetIntOrDefault("peer.gossip.maxPropagationBurstSize", 10),
+		PropagateIterations:        util.GetIntOrDefault("peer.gossip.propagateIterations", 1),
+		PropagatePeerNum:           util.GetIntOrDefault("peer.gossip.propagatePeerNum", 3),
+		PullInterval:               util.GetDurationOrDefault("peer.gossip.pullInterval", 4*time.Second),
+		PullPeerNum:                util.GetIntOrDefault("peer.gossip.pullPeerNum", 3),
+		InternalEndpoint:           selfEndpoint,
+		ExternalEndpoint:           externalEndpoint,
+		PublishCertPeriod:          util.GetDurationOrDefault("peer.gossip.publishCertPeriod", 10*time.Second),
+		RequestStateInfoInterval:   util.GetDurationOrDefault("peer.gossip.requestStateInfoInterval", 4*time.Second),
+		PublishStateInfoInterval:   util.GetDurationOrDefault("peer.gossip.publishStateInfoInterval", 4*time.Second),
+		SkipBlockVerification:      viper.GetBool("peer.gossip.skipBlockVerification"),
+		TLSServerCert:              cert,
+	}, nil
+}
+//代码在gossip/integration/integration.go
+```
+
+## 4、Gossip接口定义及实现
+
+### 4.1、Gossip接口定义
+
+```go
+type Gossip interface {
+	//向节点发送消息
+	Send(msg *proto.GossipMessage, peers ...*comm.RemotePeer)
+	//返回活的节点
+	Peers() []discovery.NetworkMember
+	//返回指定通道的活的节点
+	PeersOfChannel(common.ChainID) []discovery.NetworkMember
+	//更新metadata
+	UpdateMetadata(metadata []byte)
+	//更新通道metadata
+	UpdateChannelMetadata(metadata []byte, chainID common.ChainID)
+	//向网络内其他节点发送数据
+	Gossip(msg *proto.GossipMessage)
+	Accept(acceptor common.MessageAcceptor, passThrough bool) (<-chan *proto.GossipMessage, <-chan proto.ReceivedMessage)
+	//加入通道
+	JoinChan(joinMsg api.JoinChannelMessage, chainID common.ChainID)
+	//验证可疑节点身份，并关闭无效链接
+	SuspectPeers(s api.PeerSuspector)
+	//停止Gossip服务
+	Stop()
+}
+//代码在gossip/gossip/gossip.go
+```
+
+### 4.2、Config结构体定义
+
+```go
+type Config struct {
+	BindPort            int      //绑定的端口，仅用于测试
+	ID                  string   //本实例id，即对外开放的节点地址
+	BootstrapPeers      []string //启动时要链接的节点
+	PropagateIterations int      //取自peer.gossip.propagateIterations，消息转发的次数，默认为1
+	PropagatePeerNum    int      //取自peer.gossip.propagatePeerNum，消息推送给节点的个数，默认为3
+	MaxBlockCountToStore int //取自peer.gossip.maxBlockCountToStore，保存到内存中的区块个数上限，默认100
+	MaxPropagationBurstSize    int           //取自peer.gossip.maxPropagationBurstSize，保存的最大消息个数，超过则转发给其他节点，默认为10
+	MaxPropagationBurstLatency time.Duration //取自peer.gossip.maxPropagationBurstLatency，保存消息的最大时间，超过则转发给其他节点，默认为10毫秒
+
+	PullInterval time.Duration //取自peer.gossip.pullInterval，拉取消息的时间间隔，默认为4秒
+	PullPeerNum  int           //取自peer.gossip.pullPeerNum，从指定个数的节点拉取信息，默认3个
+
+	SkipBlockVerification bool //取自peer.gossip.skipBlockVerification，是否不对区块消息进行校验，默认false即需校验
+	PublishCertPeriod        time.Duration    //取自peer.gossip.publishCertPeriod，包括在消息中的启动证书的时间，默认10s
+	PublishStateInfoInterval time.Duration    //取自peer.gossip.publishStateInfoInterval，向其他节点推送状态信息的时间间隔，默认4s
+	RequestStateInfoInterval time.Duration    //取自peer.gossip.requestStateInfoInterval，从其他节点拉取状态信息的时间间隔，默认4s
+	TLSServerCert            *tls.Certificate //本节点TLS 证书
+
+	InternalEndpoint string //本节点在组织内使用的地址
+	ExternalEndpoint string //本节点对外部组织公布的地址
+}
+//代码在gossip/gossip/gossip.go
+```
+
+### 4.3、Gossip接口实现
+
+Gossip接口接口实现，即gossipServiceImpl结构体及方法。
+
+#### 4.3.1、gossipServiceImpl结构体及方法
+
+```go
+type gossipServiceImpl struct {
+	selfIdentity          api.PeerIdentityType
+	includeIdentityPeriod time.Time
+	certStore             *certStore
+	idMapper              identity.Mapper
+	presumedDead          chan common.PKIidType
+	disc                  discovery.Discovery
+	comm                  comm.Comm
+	incTime               time.Time
+	selfOrg               api.OrgIdentityType
+	*comm.ChannelDeMultiplexer
+	logger            *logging.Logger
+	stopSignal        *sync.WaitGroup
+	conf              *Config
+	toDieChan         chan struct{}
+	stopFlag          int32
+	emitter           batchingEmitter
+	discAdapter       *discoveryAdapter
+	secAdvisor        api.SecurityAdvisor
+	chanState         *channelState
+	disSecAdap        *discoverySecurityAdapter
+	mcs               api.MessageCryptoService
+	stateInfoMsgStore msgstore.MessageStore
+}
+
+func NewGossipService(conf *Config, s *grpc.Server, secAdvisor api.SecurityAdvisor,
+func NewGossipServiceWithServer(conf *Config, secAdvisor api.SecurityAdvisor, mcs api.MessageCryptoService,
+func (g *gossipServiceImpl) JoinChan(joinMsg api.JoinChannelMessage, chainID common.ChainID)
+func (g *gossipServiceImpl) SuspectPeers(isSuspected api.PeerSuspector)
+func (g *gossipServiceImpl) Gossip(msg *proto.GossipMessage)
+func (g *gossipServiceImpl) Send(msg *proto.GossipMessage, peers ...*comm.RemotePeer)
+func (g *gossipServiceImpl) Peers() []discovery.NetworkMember
+func (g *gossipServiceImpl) PeersOfChannel(channel common.ChainID) []discovery.NetworkMember
+func (g *gossipServiceImpl) Stop()
+func (g *gossipServiceImpl) UpdateMetadata(md []byte)
+func (g *gossipServiceImpl) UpdateChannelMetadata(md []byte, chainID common.ChainID)
+func (g *gossipServiceImpl) Accept(acceptor common.MessageAcceptor, passThrough bool) (<-chan *proto.GossipMessage, <-chan proto.ReceivedMessage)
+
+func (g *gossipServiceImpl) newStateInfoMsgStore() msgstore.MessageStore
+func (g *gossipServiceImpl) selfNetworkMember() discovery.NetworkMember
+func newChannelState(g *gossipServiceImpl) *channelState
+func createCommWithoutServer(s *grpc.Server, cert *tls.Certificate, idStore identity.Mapper,
+func createCommWithServer(port int, idStore identity.Mapper, identity api.PeerIdentityType,
+func (g *gossipServiceImpl) toDie() bool
+func (g *gossipServiceImpl) periodicalIdentityValidationAndExpiration()
+func (g *gossipServiceImpl) periodicalIdentityValidation(suspectFunc api.PeerSuspector, interval time.Duration)
+func (g *gossipServiceImpl) learnAnchorPeers(orgOfAnchorPeers api.OrgIdentityType, anchorPeers []api.AnchorPeer)
+func (g *gossipServiceImpl) handlePresumedDead()
+func (g *gossipServiceImpl) syncDiscovery()
+func (g *gossipServiceImpl) start()
+func (g *gossipServiceImpl) acceptMessages(incMsgs <-chan proto.ReceivedMessage)
+func (g *gossipServiceImpl) handleMessage(m proto.ReceivedMessage)
+func (g *gossipServiceImpl) forwardDiscoveryMsg(msg proto.ReceivedMessage)
+func (g *gossipServiceImpl) validateMsg(msg proto.ReceivedMessage) bool
+func (g *gossipServiceImpl) sendGossipBatch(a []interface{})
+func (g *gossipServiceImpl) gossipBatch(msgs []*proto.SignedGossipMessage)
+func (g *gossipServiceImpl) sendAndFilterSecrets(msg *proto.SignedGossipMessage, peers ...*comm.RemotePeer)
+func (g *gossipServiceImpl) gossipInChan(messages []*proto.SignedGossipMessage, chanRoutingFactory channelRoutingFilterFactory)
+func selectOnlyDiscoveryMessages(m interface{}) bool
+func (g *gossipServiceImpl) newDiscoverySecurityAdapter() *discoverySecurityAdapter
+func (sa *discoverySecurityAdapter) ValidateAliveMsg(m *proto.SignedGossipMessage) bool
+func (sa *discoverySecurityAdapter) SignMessage(m *proto.GossipMessage, internalEndpoint string) *proto.Envelope
+func (sa *discoverySecurityAdapter) validateAliveMsgSignature(m *proto.SignedGossipMessage, identity api.PeerIdentityType) bool
+func (g *gossipServiceImpl) createCertStorePuller() pull.Mediator
+func (g *gossipServiceImpl) sameOrgOrOurOrgPullFilter(msg proto.ReceivedMessage) func(string) bool
+func (g *gossipServiceImpl) connect2BootstrapPeers()
+func (g *gossipServiceImpl) createStateInfoMsg(metadata []byte, chainID common.ChainID) (*proto.SignedGossipMessage, error)
+func (g *gossipServiceImpl) hasExternalEndpoint(PKIID common.PKIidType) bool
+func (g *gossipServiceImpl) isInMyorg(member discovery.NetworkMember) bool
+func (g *gossipServiceImpl) getOrgOfPeer(PKIID common.PKIidType) api.OrgIdentityType
+func (g *gossipServiceImpl) validateLeadershipMessage(msg *proto.SignedGossipMessage) error
+func (g *gossipServiceImpl) validateStateInfoMsg(msg *proto.SignedGossipMessage) error
+func (g *gossipServiceImpl) disclosurePolicy(remotePeer *discovery.NetworkMember) (discovery.Sieve, discovery.EnvelopeFilter)
+func (g *gossipServiceImpl) peersByOriginOrgPolicy(peer discovery.NetworkMember) filter.RoutingFilter
+func partitionMessages(pred common.MessageAcceptor, a []*proto.SignedGossipMessage) ([]*proto.SignedGossipMessage, []*proto.SignedGossipMessage)
+func extractChannels(a []*proto.SignedGossipMessage) []common.ChainID
+
+func (g *gossipServiceImpl) newDiscoveryAdapter() *discoveryAdapter
+func (da *discoveryAdapter) close()
+func (da *discoveryAdapter) toDie() bool
+func (da *discoveryAdapter) Gossip(msg *proto.SignedGossipMessage)
+func (da *discoveryAdapter) SendToPeer(peer *discovery.NetworkMember, msg *proto.SignedGossipMessage)
+func (da *discoveryAdapter) Ping(peer *discovery.NetworkMember) bool
+func (da *discoveryAdapter) Accept() <-chan *proto.SignedGossipMessage
+func (da *discoveryAdapter) PresumedDead() <-chan common.PKIidType
+func (da *discoveryAdapter) CloseConn(peer *discovery.NetworkMember)
+//代码在gossip/gossip/gossip_impl.go
+```
+
+#### 4.3.2、func NewGossipService(conf *Config, s *grpc.Server, secAdvisor api.SecurityAdvisor,mcs api.MessageCryptoService, idMapper identity.Mapper, selfIdentity api.PeerIdentityType,secureDialOpts api.PeerSecureDialOpts) Gossip
+
+创建附加到grpc.Server上的Gossip实例。
+
+```go
+func NewGossipService(conf *Config, s *grpc.Server, secAdvisor api.SecurityAdvisor,
+	mcs api.MessageCryptoService, idMapper identity.Mapper, selfIdentity api.PeerIdentityType,
+	secureDialOpts api.PeerSecureDialOpts) Gossip {
+
+	var c comm.Comm
+	var err error
+
+	lgr := util.GetLogger(util.LoggingGossipModule, conf.ID)
+	if s == nil { //如果指定peerServer，则创建独立的grpc Server
+		c, err = createCommWithServer(conf.BindPort, idMapper, selfIdentity, secureDialOpts)
+	} else { //如果指定了peerServer，则将GossipService，直接注册到peerServer上
+		c, err = createCommWithoutServer(s, conf.TLSServerCert, idMapper, selfIdentity, secureDialOpts)
+	}
+
+	g := &gossipServiceImpl{
+		selfOrg:               secAdvisor.OrgByPeerIdentity(selfIdentity),
+		secAdvisor:            secAdvisor,
+		selfIdentity:          selfIdentity,
+		presumedDead:          make(chan common.PKIidType, presumedDeadChanSize),
+		idMapper:              idMapper,
+		disc:                  nil,
+		mcs:                   mcs,
+		comm:                  c,
+		conf:                  conf,
+		ChannelDeMultiplexer:  comm.NewChannelDemultiplexer(),
+		logger:                lgr,
+		toDieChan:             make(chan struct{}, 1),
+		stopFlag:              int32(0),
+		stopSignal:            &sync.WaitGroup{},
+		includeIdentityPeriod: time.Now().Add(conf.PublishCertPeriod),
+	}
+	g.stateInfoMsgStore = g.newStateInfoMsgStore()
+
+	g.chanState = newChannelState(g)
+	g.emitter = newBatchingEmitter(conf.PropagateIterations,
+		conf.MaxPropagationBurstSize, conf.MaxPropagationBurstLatency,
+		g.sendGossipBatch)
+
+	g.discAdapter = g.newDiscoveryAdapter()
+	g.disSecAdap = g.newDiscoverySecurityAdapter()
+	g.disc = discovery.NewDiscoveryService(g.selfNetworkMember(), g.discAdapter, g.disSecAdap, g.disclosurePolicy)
+	g.logger.Info("Creating gossip service with self membership of", g.selfNetworkMember())
+
+	g.certStore = newCertStore(g.createCertStorePuller(), idMapper, selfIdentity, mcs)
+
+	if g.conf.ExternalEndpoint == "" {
+		g.logger.Warning("External endpoint is empty, peer will not be accessible outside of its organization")
+	}
+
+	go g.start()
+	go g.periodicalIdentityValidationAndExpiration()
+	go g.connect2BootstrapPeers()
+
+	return g
+}
+//代码在gossip/gossip/gossip_impl.go
+```
 	
-## 3、MessageCryptoService接口及实现
+## 10、MessageCryptoService接口及实现
 
 MessageCryptoService接口定义：消息加密服务。
 

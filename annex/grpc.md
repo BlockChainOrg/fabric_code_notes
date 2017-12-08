@@ -6,6 +6,7 @@ Peer节点中注册的gRPC Service，包括：
 * Admin Service（管理服务）：GetStatus、StartServer、GetModuleLogLevel、SetModuleLogLevel、RevertLogLevels
 * Endorser Service（背书服务）：ProcessProposal
 * ChaincodeSupport Service（链码支持服务）：Register
+* Gossip Service（Gossip服务）:GossipStream、Ping
 
 Orderer节点中注册的gRPC Service，包括：
 
@@ -409,6 +410,148 @@ var _ChaincodeSupport_serviceDesc = grpc.ServiceDesc{
 	Metadata: "peer/chaincode_shim.proto",
 }
 //代码在protos/peer/peer.pb.go
+```
+
+### 1.5、Gossip Service（Gossip服务）
+
+#### 1.5.1、Gossip Service客户端
+
+```go
+type GossipClient interface {
+	// GossipStream is the gRPC stream used for sending and receiving messages
+	GossipStream(ctx context.Context, opts ...grpc.CallOption) (Gossip_GossipStreamClient, error)
+	// Ping is used to probe a remote peer's aliveness
+	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type gossipClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewGossipClient(cc *grpc.ClientConn) GossipClient {
+	return &gossipClient{cc}
+}
+
+func (c *gossipClient) GossipStream(ctx context.Context, opts ...grpc.CallOption) (Gossip_GossipStreamClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Gossip_serviceDesc.Streams[0], c.cc, "/gossip.Gossip/GossipStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &gossipGossipStreamClient{stream}
+	return x, nil
+}
+
+type Gossip_GossipStreamClient interface {
+	Send(*Envelope) error
+	Recv() (*Envelope, error)
+	grpc.ClientStream
+}
+
+type gossipGossipStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *gossipGossipStreamClient) Send(m *Envelope) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *gossipGossipStreamClient) Recv() (*Envelope, error) {
+	m := new(Envelope)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *gossipClient) Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/gossip.Gossip/Ping", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+//代码在protos/gossip/message.pb.go
+```
+
+#### 1.5.2、Gossip Serviced服务端
+
+```go
+type GossipServer interface {
+	// GossipStream is the gRPC stream used for sending and receiving messages
+	GossipStream(Gossip_GossipStreamServer) error
+	// Ping is used to probe a remote peer's aliveness
+	Ping(context.Context, *Empty) (*Empty, error)
+}
+
+func RegisterGossipServer(s *grpc.Server, srv GossipServer) {
+	s.RegisterService(&_Gossip_serviceDesc, srv)
+}
+
+func _Gossip_GossipStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GossipServer).GossipStream(&gossipGossipStreamServer{stream})
+}
+
+type Gossip_GossipStreamServer interface {
+	Send(*Envelope) error
+	Recv() (*Envelope, error)
+	grpc.ServerStream
+}
+
+type gossipGossipStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *gossipGossipStreamServer) Send(m *Envelope) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *gossipGossipStreamServer) Recv() (*Envelope, error) {
+	m := new(Envelope)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Gossip_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GossipServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gossip.Gossip/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GossipServer).Ping(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Gossip_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "gossip.Gossip",
+	HandlerType: (*GossipServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Ping",
+			Handler:    _Gossip_Ping_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GossipStream",
+			Handler:       _Gossip_GossipStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "gossip/message.proto",
+}
+//代码在protos/gossip/message.pb.go
 ```
 
 ## 2、Orderer节点中注册的gRPC Service
