@@ -382,9 +382,9 @@ func NewGossipService(conf *Config, s *grpc.Server, secAdvisor api.SecurityAdvis
 	var err error
 
 	lgr := util.GetLogger(util.LoggingGossipModule, conf.ID)
-	if s == nil { //如果指定peerServer，则创建独立的grpc Server
+	if s == nil { 创建并启动gRPC Server，以及注册GossipServer实例
 		c, err = createCommWithServer(conf.BindPort, idMapper, selfIdentity, secureDialOpts)
-	} else { //如果指定了peerServer，则将GossipService，直接注册到peerServer上
+	} else { //将GossipServer实例注册至peerServer
 		c, err = createCommWithoutServer(s, conf.TLSServerCert, idMapper, selfIdentity, secureDialOpts)
 	}
 
