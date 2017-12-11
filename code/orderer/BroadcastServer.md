@@ -209,4 +209,78 @@ err = srv.Send(&ab.BroadcastResponse{Status: cb.Status_SUCCESS})
 
 ### 3.4、Broadcast服务端Deliver处理流程
 
-暂略。
+Broadcast服务端Deliver处理流程，即deliver.deliverServer.Handle方法。
+
+```go
+func (ds *deliverServer) Handle(srv ab.AtomicBroadcast_DeliverServer) error {
+	for {
+		//接收客户端查询请求
+		envelope, err := srv.Recv()
+		payload, err := utils.UnmarshalPayload(envelope.Payload)
+		chdr, err := utils.UnmarshalChannelHeader(payload.Header.ChannelHeader)
+		chain, ok := ds.sm.GetChain(chdr.ChannelId)
+
+		erroredChan := chain.Errored()
+		select {
+		case <-erroredChan:
+			return sendStatusReply(srv, cb.Status_SERVICE_UNAVAILABLE)
+		default:
+
+		}
+
+		lastConfigSequence := chain.Sequence()
+
+		sf := sigfilter.New(policies.ChannelReaders, chain.PolicyManager())
+		result, _ := sf.Apply(envelope)
+
+		seekInfo := &ab.SeekInfo{}
+		err = proto.Unmarshal(payload.Data, seekInfo)
+
+		cursor, number := chain.Reader().Iterator(seekInfo.Start)
+		var stopNum uint64
+		switch stop := seekInfo.Stop.Type.(type) {
+		case *ab.SeekPosition_Oldest:
+			stopNum = number
+		case *ab.SeekPosition_Newest:
+			stopNum = chain.Reader().Height() - 1
+		case *ab.SeekPosition_Specified:
+			stopNum = stop.Specified.Number
+			if stopNum < number {
+				return sendStatusReply(srv, cb.Status_BAD_REQUEST)
+			}
+		}
+
+		for {
+			if seekInfo.Behavior == ab.SeekInfo_BLOCK_UNTIL_READY {
+				select {
+				case <-erroredChan:
+					return sendStatusReply(srv, cb.Status_SERVICE_UNAVAILABLE)
+				case <-cursor.ReadyChan():
+				}
+			} else {
+				select {
+				case <-cursor.ReadyChan():
+				default:
+					return sendStatusReply(srv, cb.Status_NOT_FOUND)
+				}
+			}
+
+			currentConfigSequence := chain.Sequence()
+			if currentConfigSequence > lastConfigSequence {
+				lastConfigSequence = currentConfigSequence
+				sf := sigfilter.New(policies.ChannelReaders, chain.PolicyManager())
+				result, _ := sf.Apply(envelope)
+
+			}
+
+			block, status := cursor.Next()
+			err := sendBlockReply(srv, block)
+			if stopNum == block.Header.Number {
+				break
+			}
+		}
+
+		err := sendStatusReply(srv, cb.Status_SUCCESS)
+	}
+}
+```
