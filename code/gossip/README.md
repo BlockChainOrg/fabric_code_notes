@@ -20,6 +20,7 @@ gossip代码，分布在gossip、peer/gossip目录下，目录结构如下：
 	* integration目录，NewGossipComponent工具函数。
 	* gossip目录，Gossip接口定义及实现。
 	* comm目录，GossipServer接口实现。
+	* state目录，GossipStateProvider接口定义及实现（状态复制）。
 	* api目录：消息加密服务接口定义。
 		* crypto.go，MessageCryptoService接口定义。
 		* channel.go，SecurityAdvisor接口定义。
@@ -174,6 +175,7 @@ func (g *gossipServiceImpl) InitializeChannel(chainID string, committer committe
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	//构造GossipStateProviderImpl，并启动goroutine处理从orderer或其他节点接收的block
 	g.chains[chainID] = state.NewGossipStateProvider(chainID, g, committer, g.mcs)
 	if g.deliveryService == nil {
 		var err error
@@ -193,6 +195,17 @@ func (g *gossipServiceImpl) InitializeChannel(chainID string, committer committe
 		}
 }
 
+//代码在gossip/service/gossip_service.go
+```
+
+#### 2.2.4、func (g *gossipServiceImpl) AddPayload(chainID string, payload *proto.Payload) error 
+
+```go
+func (g *gossipServiceImpl) AddPayload(chainID string, payload *proto.Payload) error {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
+	return g.chains[chainID].AddPayload(payload)
+}
 //代码在gossip/service/gossip_service.go
 ```
 
@@ -491,11 +504,383 @@ func (g *gossipServiceImpl) acceptMessages(incMsgs <-chan proto.ReceivedMessage)
 			g.toDieChan <- s
 			return
 		case msg := <-incMsgs:
-			g.handleMessage(msg)
+			g.handleMessage(msg) //此处会调取gc.HandleMessage(m)，处理转发消息
 		}
 	}
 }
 //代码在gossip/gossip/gossip_impl.go
+```
+
+gc.HandleMessage(m)代码如下：
+
+```go
+func (gc *gossipChannel) HandleMessage(msg proto.ReceivedMessage) {
+	m := msg.GetGossipMessage()
+	orgID := gc.GetOrgOfPeer(msg.GetConnectionInfo().ID)
+	if m.IsDataMsg() || m.IsStateInfoMsg() {
+		added := false
+
+		if m.IsDataMsg() {
+			added = gc.blockMsgStore.Add(msg.GetGossipMessage())
+		} else {
+			added = gc.stateInfoMsgStore.Add(msg.GetGossipMessage())
+		}
+
+		if added {
+			gc.Gossip(msg.GetGossipMessage()) //转发给其他节点，最终会调用func (g *gossipServiceImpl) gossipBatch(msgs []*proto.SignedGossipMessage)实现批量分发
+			gc.DeMultiplex(m)
+			if m.IsDataMsg() {
+				gc.blocksPuller.Add(msg.GetGossipMessage())
+			}
+		}
+		return
+	}
+	//...
+}
+//代码在gossip/gossip/channel/channel.go
+```
+
+func (g *gossipServiceImpl) gossipBatch(msgs []*proto.SignedGossipMessage)代码如下：
+
+```go
+func (g *gossipServiceImpl) gossipBatch(msgs []*proto.SignedGossipMessage) {
+	var blocks []*proto.SignedGossipMessage
+	var stateInfoMsgs []*proto.SignedGossipMessage
+	var orgMsgs []*proto.SignedGossipMessage
+	var leadershipMsgs []*proto.SignedGossipMessage
+
+	isABlock := func(o interface{}) bool {
+		return o.(*proto.SignedGossipMessage).IsDataMsg()
+	}
+	isAStateInfoMsg := func(o interface{}) bool {
+		return o.(*proto.SignedGossipMessage).IsStateInfoMsg()
+	}
+	isOrgRestricted := func(o interface{}) bool {
+		return aliveMsgsWithNoEndpointAndInOurOrg(o) || o.(*proto.SignedGossipMessage).IsOrgRestricted()
+	}
+	isLeadershipMsg := func(o interface{}) bool {
+		return o.(*proto.SignedGossipMessage).IsLeadershipMsg()
+	}
+
+	// Gossip blocks
+	blocks, msgs = partitionMessages(isABlock, msgs)
+	g.gossipInChan(blocks, func(gc channel.GossipChannel) filter.RoutingFilter {
+		return filter.CombineRoutingFilters(gc.EligibleForChannel, gc.IsMemberInChan, g.isInMyorg)
+	})
+
+	// Gossip Leadership messages
+	leadershipMsgs, msgs = partitionMessages(isLeadershipMsg, msgs)
+	g.gossipInChan(leadershipMsgs, func(gc channel.GossipChannel) filter.RoutingFilter {
+		return filter.CombineRoutingFilters(gc.EligibleForChannel, gc.IsMemberInChan, g.isInMyorg)
+	})
+
+	// Gossip StateInfo messages
+	stateInfoMsgs, msgs = partitionMessages(isAStateInfoMsg, msgs)
+	for _, stateInfMsg := range stateInfoMsgs {
+		peerSelector := g.isInMyorg
+		gc := g.chanState.lookupChannelForGossipMsg(stateInfMsg.GossipMessage)
+		if gc != nil && g.hasExternalEndpoint(stateInfMsg.GossipMessage.GetStateInfo().PkiId) {
+			peerSelector = gc.IsMemberInChan
+		}
+
+		peers2Send := filter.SelectPeers(g.conf.PropagatePeerNum, g.disc.GetMembership(), peerSelector)
+		g.comm.Send(stateInfMsg, peers2Send...)
+	}
+
+	// Gossip messages restricted to our org
+	orgMsgs, msgs = partitionMessages(isOrgRestricted, msgs)
+	peers2Send := filter.SelectPeers(g.conf.PropagatePeerNum, g.disc.GetMembership(), g.isInMyorg)
+	for _, msg := range orgMsgs {
+		g.comm.Send(msg, peers2Send...)
+	}
+
+	// Finally, gossip the remaining messages
+	for _, msg := range msgs {
+		selectByOriginOrg := g.peersByOriginOrgPolicy(discovery.NetworkMember{PKIid: msg.GetAliveMsg().Membership.PkiId})
+		peers2Send := filter.SelectPeers(g.conf.PropagatePeerNum, g.disc.GetMembership(), selectByOriginOrg)
+		g.sendAndFilterSecrets(msg, peers2Send...)
+	}
+}
+//代码在gossip/gossip/gossip_impl.go
+```
+
+## 5、GossipStateProvider接口定义及实现（状态复制）
+
+### 5.1、GossipStateProvider接口定义
+
+通过状态复制填充缺少的块，以及发送请求从其他节点获取缺少的块
+
+```go
+type GossipStateProvider interface {
+	//按索引获取块
+	GetBlock(index uint64) *common.Block
+	//添加块
+	AddPayload(payload *proto.Payload) error
+	//终止状态复制
+	Stop()
+}
+//代码在gossip/state/state.go
+```
+
+### 5.2、GossipStateProvider接口实现
+
+```go
+type GossipStateProviderImpl struct {
+	mcs api.MessageCryptoService //消息加密服务
+	chainID string //Chain id
+	gossip GossipAdapter //gossiping service
+	gossipChan <-chan *proto.GossipMessage
+	commChan <-chan proto.ReceivedMessage
+	payloads PayloadsBuffer //Payloads队列缓存
+	committer committer.Committer
+	stateResponseCh chan proto.ReceivedMessage
+	stateRequestCh chan proto.ReceivedMessage
+	stopCh chan struct{}
+	done sync.WaitGroup
+	once sync.Once
+	stateTransferActive int32
+}
+
+func (s *GossipStateProviderImpl) GetBlock(index uint64) *common.Block
+func (s *GossipStateProviderImpl) AddPayload(payload *proto.Payload) error
+func (s *GossipStateProviderImpl) Stop()
+
+func NewGossipStateProvider(chainID string, g GossipAdapter, committer committer.Committer, mcs api.MessageCryptoService) GossipStateProvider
+func (s *GossipStateProviderImpl) listen()
+func (s *GossipStateProviderImpl) directMessage(msg proto.ReceivedMessage)
+func (s *GossipStateProviderImpl) processStateRequests()
+func (s *GossipStateProviderImpl) handleStateRequest(msg proto.ReceivedMessage)
+func (s *GossipStateProviderImpl) handleStateResponse(msg proto.ReceivedMessage) (uint64, error)
+func (s *GossipStateProviderImpl) queueNewMessage(msg *proto.GossipMessage)
+func (s *GossipStateProviderImpl) deliverPayloads()
+func (s *GossipStateProviderImpl) antiEntropy()
+func (s *GossipStateProviderImpl) maxAvailableLedgerHeight() uint64
+func (s *GossipStateProviderImpl) requestBlocksInRange(start uint64, end uint64)
+func (s *GossipStateProviderImpl) stateRequestMessage(beginSeq uint64, endSeq uint64) *proto.GossipMessage
+func (s *GossipStateProviderImpl) selectPeerToRequestFrom(height uint64) (*comm.RemotePeer, error)
+func (s *GossipStateProviderImpl) filterPeers(predicate func(peer discovery.NetworkMember) bool) []*comm.RemotePeer
+func (s *GossipStateProviderImpl) hasRequiredHeight(height uint64) func(peer discovery.NetworkMember) bool
+func (s *GossipStateProviderImpl) addPayload(payload *proto.Payload, blockingMode bool) error
+func (s *GossipStateProviderImpl) commitBlock(block *common.Block) error
+
+//代码在gossip/state/state.go
+```
+
+#### 5.2.1、func (s *GossipStateProviderImpl) AddPayload(payload *proto.Payload) error
+
+```go
+func (s *GossipStateProviderImpl) AddPayload(payload *proto.Payload) error {
+	blockingMode := blocking
+	if viper.GetBool("peer.gossip.nonBlockingCommitMode") { //非阻塞提交模式
+		blockingMode = false
+	}
+	return s.addPayload(payload, blockingMode)
+}
+//代码在gossip/state/state.go
+```
+
+s.addPayload(payload, blockingMode)代码如下：
+
+```go
+func (s *GossipStateProviderImpl) addPayload(payload *proto.Payload, blockingMode bool) error {
+	height, err := s.committer.LedgerHeight()
+	return s.payloads.Push(payload) //加入缓存
+}
+//代码在gossip/state/state.go
+```
+
+#### 5.2.2、func NewGossipStateProvider(chainID string, g GossipAdapter, committer committer.Committer, mcs api.MessageCryptoService) GossipStateProvider
+
+```go
+func NewGossipStateProvider(chainID string, g GossipAdapter, committer committer.Committer, mcs api.MessageCryptoService) GossipStateProvider {
+	logger := util.GetLogger(util.LoggingStateModule, "")
+
+	gossipChan, _ := g.Accept(func(message interface{}) bool {
+		return message.(*proto.GossipMessage).IsDataMsg() &&
+			bytes.Equal(message.(*proto.GossipMessage).Channel, []byte(chainID))
+	}, false)
+
+	remoteStateMsgFilter := func(message interface{}) bool {
+		receivedMsg := message.(proto.ReceivedMessage)
+		msg := receivedMsg.GetGossipMessage()
+		connInfo := receivedMsg.GetConnectionInfo()
+		authErr := mcs.VerifyByChannel(msg.Channel, connInfo.Identity, connInfo.Auth.Signature, connInfo.Auth.SignedData)
+		return true
+	}
+
+	_, commChan := g.Accept(remoteStateMsgFilter, true)
+
+	height, err := committer.LedgerHeight()
+
+	s := &GossipStateProviderImpl{
+		mcs: mcs,
+		chainID: chainID,
+		gossip: g,
+		gossipChan: gossipChan,
+		commChan: commChan,
+		payloads: NewPayloadsBuffer(height),
+		committer: committer,
+		stateResponseCh: make(chan proto.ReceivedMessage, defChannelBufferSize),
+		stateRequestCh: make(chan proto.ReceivedMessage, defChannelBufferSize),
+		stopCh: make(chan struct{}, 1),
+		stateTransferActive: 0,
+		once: sync.Once{},
+	}
+
+	nodeMetastate := NewNodeMetastate(height - 1)
+	b, err := nodeMetastate.Bytes()
+	s.done.Add(4)
+
+	go s.listen()
+	go s.deliverPayloads() //处理从orderer获取的块
+	go s.antiEntropy() //处理缺失块
+	go s.processStateRequests() //处理状态请求消息
+	return s
+}
+//代码在gossip/state/state.go
+```
+
+#### 5.2.3、func (s *GossipStateProviderImpl) deliverPayloads()
+
+```go
+func (s *GossipStateProviderImpl) deliverPayloads() {
+	defer s.done.Done()
+
+	for {
+		select {
+		case <-s.payloads.Ready():
+			for payload := s.payloads.Pop(); payload != nil; payload = s.payloads.Pop() {
+				rawBlock := &common.Block{}
+				err := pb.Unmarshal(payload.Data, rawBlock)
+				err := s.commitBlock(rawBlock)
+			}
+		case <-s.stopCh:
+			s.stopCh <- struct{}{}
+			logger.Debug("State provider has been stoped, finishing to push new blocks.")
+			return
+		}
+	}
+}
+
+func (s *GossipStateProviderImpl) commitBlock(block *common.Block) error {
+	err := s.committer.Commit(block)
+	nodeMetastate := NewNodeMetastate(block.Header.Number)
+	b, err := nodeMetastate.Bytes()
+	return nil
+}
+//代码在gossip/state/state.go
+```
+
+#### 5.2.4、func (s *GossipStateProviderImpl) antiEntropy()
+
+定时获取当前高度和节点中最大高度的差值
+
+```go
+func (s *GossipStateProviderImpl) antiEntropy() {
+	defer s.done.Done()
+
+	for {
+		select {
+		case <-s.stopCh:
+			s.stopCh <- struct{}{}
+			return
+		case <-time.After(defAntiEntropyInterval):
+			current, err := s.committer.LedgerHeight()
+			max := s.maxAvailableLedgerHeight() //最大高度
+			s.requestBlocksInRange(uint64(current), uint64(max))
+		}
+	}
+}
+//代码在gossip/state/state.go
+```
+
+s.requestBlocksInRange(uint64(current), uint64(max))代码如下：
+
+```go
+func (s *GossipStateProviderImpl) requestBlocksInRange(start uint64, end uint64) {
+	atomic.StoreInt32(&s.stateTransferActive, 1)
+	defer atomic.StoreInt32(&s.stateTransferActive, 0)
+
+	for prev := start; prev <= end; {
+		next := min(end, prev+defAntiEntropyBatchSize) //一批最大10个
+		gossipMsg := s.stateRequestMessage(prev, next) //构造GossipMessage_StateRequest
+
+		responseReceived := false
+		tryCounts := 0
+
+		for !responseReceived {
+			peer, err := s.selectPeerToRequestFrom(next) //确定peer
+			s.gossip.Send(gossipMsg, peer)
+			tryCounts++
+			select {
+			case msg := <-s.stateResponseCh:
+				if msg.GetGossipMessage().Nonce != gossipMsg.Nonce {
+					continue
+				}
+				index, err := s.handleStateResponse(msg)
+				prev = index + 1
+				responseReceived = true
+			case <-time.After(defAntiEntropyStateResponseTimeout):
+			case <-s.stopCh:
+				s.stopCh <- struct{}{}
+				return
+			}
+		}
+	}
+}
+//代码在gossip/state/state.go
+```
+
+index, err := s.handleStateResponse(msg)代码如下：
+
+```go
+func (s *GossipStateProviderImpl) handleStateResponse(msg proto.ReceivedMessage) (uint64, error) {
+	max := uint64(0)
+	response := msg.GetGossipMessage().GetStateResponse()
+	for _, payload := range response.GetPayloads() {
+		err := s.mcs.VerifyBlock(common2.ChainID(s.chainID), payload.SeqNum, payload.Data)
+		err := s.addPayload(payload, blocking) //存入本地
+	}
+	return max, nil
+}
+//代码在gossip/state/state.go
+```
+
+committer更详细内容，参考：[Fabric 1.0源代码笔记 之 Peer #committer（提交者）](../peer/committer.md)
+
+#### 5.2.5、func (s *GossipStateProviderImpl) listen()
+
+```go
+func (s *GossipStateProviderImpl) listen() {
+	defer s.done.Done()
+
+	for {
+		select {
+		case msg := <-s.gossipChan:
+			//处理从通道中其他节点分发的消息
+			go s.queueNewMessage(msg)
+		case msg := <-s.commChan:
+			logger.Debug("Direct message ", msg)
+			go s.directMessage(msg)
+		case <-s.stopCh:
+			s.stopCh <- struct{}{}
+			return
+		}
+	}
+}
+//代码在gossip/state/state.go
+```
+
+go s.queueNewMessage(msg)代码如下：
+
+```go
+func (s *GossipStateProviderImpl) queueNewMessage(msg *proto.GossipMessage) {
+	dataMsg := msg.GetDataMsg()
+	if dataMsg != nil {
+		err := s.addPayload(dataMsg.GetPayload(), nonBlocking) //写入本地
+	}
+}
+//代码在gossip/state/state.go
 ```
 	
 ## 10、MessageCryptoService接口及实现

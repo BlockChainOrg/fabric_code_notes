@@ -263,7 +263,7 @@ func (b *blocksProviderImpl) DeliverBlocks() {
 			payload := createPayload(seqNum, marshaledBlock)
 			gossipMsg := createGossipMsg(b.chainID, payload)
 			b.gossip.AddPayload(b.chainID, payload)
-			b.gossip.Gossip(gossipMsg)
+			b.gossip.Gossip(gossipMsg) //分发给其他节点
 		default:
 			logger.Warningf("[%s] Received unknown: ", b.chainID, t)
 			return
