@@ -1,5 +1,8 @@
 # Fabric 1.0源代码笔记
 
+## ■ Fabric 1.0源代码笔记 之 白话篇
+* [从源码角度白话解读Hyperledger Fabric运行全过程](code/README.md)
+
 ## ■ Fabric 1.0源代码笔记 之 Fabric源码篇
 
 *本文基于Fabric v1.0.4版本代码。*
