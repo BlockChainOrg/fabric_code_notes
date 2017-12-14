@@ -1,1 +1,13 @@
 # 从源码角度白话解读Hyperledger Fabric运行全过程
+
+### 三种节点和作用
+
+Fabric有三种节点：CA、peer和orderer，其中peer节点包含两种职能endorser和commiter。
+其中CA节点负责Fabirc网络中身份证书的管理，orderer节点负责网络中所有交易的排序。endorser负责所有交易的模拟执行和背书，而commiter负责最终交易向区块链账本中的提交和写入。
+一般的业务流程为：客户端从CA获取证书，向多个endorser发起链码执行请求（即交易提案），endorser模拟执行链码并对执行结果背书，
+客户端收集符合要求的背书后，打包交易提交给orderer，orderer将交易排序后组成区块发送给commiter，由commiter写入各自节点区块账本中。
+
+### 两个初始化工具
+
+Fabric中有两个关键的初始化工具：cryptogen和configtxgen，其中cryptogen用于用于生成组织结构和身份证书文件，configtxgen用于生成通道相关配置文件。
+
