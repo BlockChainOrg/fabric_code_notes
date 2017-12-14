@@ -19,7 +19,12 @@ cryptogen工具依赖配置文件crypto-config.yaml，这个配置文件中支�
 Fabric中支持多通道，即多链，通道几乎可等同为链。有关Fabric网络的配置，即存储在一种特殊的系统通道中。系统通道为Fabric网络的第一个通道。
 configtxgen的第一个功能即为创建系统通道的初始区块，该区块文件用于orderer节点的启动。
 configtxgen依赖配置文件configtx.yaml，该配置文件中可以定义orderer节点的配置，如共识插件、身份证书、加密算法等，以及peer节点的配置，如身份证书、加密算法、锚点等。
-configtxgen ... -outputBlock ...，即可基于配置文件创建系统通道的初始区块。
+configtxgen ... -outputBlock ...，即可基于配置文件创建系统通道的初始区块文件，如genesis.block。
 
 系统通道创建后，需创建应用通道，而configtxgen第二个功能即为生成创建应用通道所需的配置交易文件，该配置交易文件可直接用于在peer节点创建应用通道时使用。
-configtxgen ... -outputCreateChannelTx ...即可基于配置文件创建应用通道配置交易文件。
+configtxgen ... -outputCreateChannelTx ...即可基于配置文件创建应用通道配置交易文件，如channel.tx。
+
+peer机构下的多个节点，允许指定某节点为锚点，用于暴露给其他外部机构gossip通信使用。configtxgen第三个功能即为创建节点指定为锚点时所需的配置交易文件。
+configtxgen ... -outputAnchorPeersUpdate ...即可基于配置文件创建指定锚点所需要的配置交易文件，如Org1MSPanchors.tx。
+
+之所以称为配置交易文件，是指Fabric将系统配置也会打包为交易，发送给orderer排序后写入系统通道中，该文件可直接读取为交易类型的数据格式，并发送给orderer。
